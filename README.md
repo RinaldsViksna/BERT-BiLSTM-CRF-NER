@@ -1,9 +1,58 @@
 # NER evaluation for CoNLL 2003
 
-## How to run
+## How to run and evaluate
 
 ```
 $ ./run.sh
+
+$ cat output/result_dir/predicted_results.txt
+eval_f = 0.95154184
+eval_precision = 0.9613734
+eval_recall = 0.9507772
+global_step = 1405
+loss = 1.3503028
+
+$ more output/result_dir/label_test.txt
+
+[CLS]
+[SEP]
+
+SOCCER - JAPAN GET LUCKY WIN , CHINA IN SURPRISE DEFEAT .
+[CLS]
+O
+X
+X
+X
+O
+B-PER
+X
+X
+O
+X
+B-PER
+X
+X
+X
+O
+X
+O
+B-PER
+X
+X
+O
+O
+X
+X
+X
+X
+O
+X
+X
+X
+O
+[SEP]
+...
+
 $ python ext.py < output/result_dir/label_test.txt > label.txt
 $ python tok.py --vocab_file checkpoint/vocab.txt --do_lower_case False < NERdata/test.txt > test.txt.tok
 $ python merge.py --a_path test.txt.tok --b_path label.txt > pred.txt
