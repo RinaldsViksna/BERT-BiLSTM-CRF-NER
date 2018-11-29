@@ -1,3 +1,24 @@
+# NER evaluation for CoNLL 2003
+
+## How to run
+
+```
+$ ./run.sh
+$ python ext.py < output/result_dir/label_test.txt > label.txt
+$ python tok.py --vocab_file checkpoint/vocab.txt --do_lower_case False < NERdata/test.txt > test.txt.tok
+$ python merge.py --a_path test.txt.tok --b_path label.txt > pred.txt
+$ perl conlleval.pl < pred.txt
+processed 46476 tokens with 5596 phrases; found: 5706 phrases; correct: 5114.
+accuracy:  98.14%; precision:  89.62%; recall:  91.39%; FB1:  90.50
+              LOC: precision:  92.74%; recall:  92.68%; FB1:  92.71  1652
+             MISC: precision:  74.23%; recall:  82.48%; FB1:  78.14  780
+              ORG: precision:  88.69%; recall:  89.76%; FB1:  89.22  1680
+              PER: precision:  94.92%; recall:  95.70%; FB1:  95.31  1594 
+```
+
+----
+# README from source git
+
 # BERT-BiLSMT-CRF-NER
 Tensorflow solution of NER task Using BiLSTM-CRF model with Google BERT Fine-tuning
 
