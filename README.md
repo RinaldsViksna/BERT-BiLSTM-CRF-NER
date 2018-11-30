@@ -3,6 +3,17 @@
 ## How to run and evaluate
 
 ```
+* download BERT model
+
+$ ls cased_L-12_H-768_A-12 uncased_L-12_H-768_A-12
+cased_L-12_H-768_A-12:
+bert_config.json  bert_model.ckpt.data-00000-of-00001  bert_model.ckpt.index  bert_model.ckpt.meta  vocab.txt
+
+uncased_L-12_H-768_A-12:
+bert_config.json  bert_model.ckpt.data-00000-of-00001  bert_model.ckpt.index  bert_model.ckpt.meta  vocab.txt
+
+$ ln -s cased_L-12_H-768_A-12 checkpoint
+
 $ ./run.sh
 
 $ cat output/result_dir/predicted_results.txt
@@ -59,9 +70,9 @@ accuracy:  98.14%; precision:  89.39%; recall:  91.13%; FB1:  90.25
 ```
 
 ----
+
 # README from source git
 
-# BERT-BiLSMT-CRF-NER
 Tensorflow solution of NER task Using BiLSTM-CRF model with Google BERT Fine-tuning
 
 使用谷歌的BERT模型在BLSTM-CRF模型上进行预训练用于中文命名实体识别的Tensorflow代码'

@@ -5,7 +5,6 @@ rm -rf data.conf
 python bert_lstm_ner.py   \
         --task_name="NER"  \
         --do_train=True   \
-        --do_eval=True   \
         --do_predict=True \
         --data_dir=NERdata  \
         --vocab_file=checkpoint/vocab.txt  \
@@ -15,5 +14,5 @@ python bert_lstm_ner.py   \
         --max_seq_length=150   \
         --train_batch_size=32   \
         --learning_rate=2e-5   \
-        --num_train_epochs=3   \
+        --num_train_epochs=30   \
         --output_dir=./output/result_dir/
