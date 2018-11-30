@@ -38,8 +38,18 @@ flags = tf.flags
 
 FLAGS = flags.FLAGS
 
-bert_path = '/data/index.shin/BERT-BiLSTM-CRF-NER/checkpoint'
-root_path = '/data/index.shin/BERT-BiLSTM-CRF-NER'
+flags.DEFINE_string(
+    "bert_path", './checkpoint',
+    "The BERT dir",
+)
+
+flags.DEFINE_string(
+    "root_path", './BERT-BiLSTM-CRF-NER',
+    "The root path",
+)
+
+bert_path = FLAGS.bert_path
+root_path = FLAGS.root_path
 
 flags.DEFINE_string(
     "data_dir", os.path.join(root_path, 'NERdata'),

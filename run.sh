@@ -2,7 +2,11 @@ rm -rf ./output
 mkdir -p output/result_dir
 rm -rf data.conf
 
+CDIR=`pwd`
+
 python bert_lstm_ner.py   \
+        --bert_path=${CDIR}/checkpoint \
+        --root_path=${CDIR} \
         --task_name="NER"  \
         --do_train=True   \
         --do_predict=True \
