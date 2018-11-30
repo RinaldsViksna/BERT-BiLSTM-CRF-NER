@@ -43,8 +43,8 @@ if os.name == 'nt':
     bert_path = 'H:\迅雷下载\chinese_L-12_H-768_A-12\chinese_L-12_H-768_A-12'
     root_path = 'C:\workspace\python\BERT-NER'
 else:
-    bert_path = '/data/index.shin/BERT-BiLSMT-CRF-NER/checkpoint'
-    root_path = '/data/index.shin/BERT-BiLSMT-CRF-NER'
+    bert_path = '/data/index.shin/BERT-BiLSTM-CRF-NER/checkpoint'
+    root_path = '/data/index.shin/BERT-BiLSTM-CRF-NER'
 
 flags.DEFINE_string(
     "data_dir", os.path.join(root_path, 'NERdata'),
@@ -424,7 +424,7 @@ def create_model(bert_config, is_training, input_ids, input_mask,
     # 使用数据加载BertModel,获取对应的字embedding
     model = modeling.BertModel(
         config=bert_config,
-        is_training=is_training,
+        is_training=False,
         input_ids=input_ids,
         input_mask=input_mask,
         token_type_ids=segment_ids,

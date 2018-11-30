@@ -6,11 +6,19 @@
 $ ./run.sh
 
 $ cat output/result_dir/predicted_results.txt
+#1. fine-tuning, modeling.BertModel(..., is_training=is_training, ...), num_train_epochs=3
 eval_f = 0.95154184
 eval_precision = 0.9613734
 eval_recall = 0.9507772
 global_step = 1405
 loss = 1.3503028
+
+#2. feature-based, modeling.BertModel(..., is_training=False, ...), num_train_epochs=3
+eval_f = 0.95870125
+eval_precision = 0.9256314
+eval_recall = 0.97033226
+global_step = 1405
+loss = 1.3940833
 
 $ more output/result_dir/label_test.txt
 
@@ -27,42 +35,27 @@ O
 B-PER
 X
 X
-O
-X
-B-PER
-X
-X
-X
-O
-X
-O
-B-PER
-X
-X
-O
-O
-X
-X
-X
-X
-O
-X
-X
-X
-O
-[SEP]
 ...
 
 $ python ext.py < output/result_dir/label_test.txt > label.txt
 $ python tok.py --vocab_file checkpoint/vocab.txt --do_lower_case False < NERdata/test.txt > test.txt.tok
 $ python merge.py --a_path test.txt.tok --b_path label.txt > pred.txt
 $ perl conlleval.pl < pred.txt
+#1. fine-tuning
 processed 46476 tokens with 5596 phrases; found: 5706 phrases; correct: 5114.
 accuracy:  98.14%; precision:  89.62%; recall:  91.39%; FB1:  90.50
               LOC: precision:  92.74%; recall:  92.68%; FB1:  92.71  1652
              MISC: precision:  74.23%; recall:  82.48%; FB1:  78.14  780
               ORG: precision:  88.69%; recall:  89.76%; FB1:  89.22  1680
               PER: precision:  94.92%; recall:  95.70%; FB1:  95.31  1594 
+
+#2. feature-based
+processed 46666 tokens with 5648 phrases; found: 5758 phrases; correct: 5147.
+accuracy:  98.14%; precision:  89.39%; recall:  91.13%; FB1:  90.25
+              LOC: precision:  93.12%; recall:  91.73%; FB1:  92.42  1643
+             MISC: precision:  74.19%; recall:  81.91%; FB1:  77.86  775
+              ORG: precision:  86.77%; recall:  90.01%; FB1:  88.36  1723
+              PER: precision:  95.67%; recall:  95.67%; FB1:  95.67  1617
 ```
 
 ----
