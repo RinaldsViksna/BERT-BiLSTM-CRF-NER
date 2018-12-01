@@ -1,11 +1,14 @@
-#! usr/bin/env python3
+#! usr/bin/env python
 # -*- coding:utf-8 -*-
+
 """
 Copyright 2018 The Google AI Language Team Authors.
 BASED ON Google_BERT.
 reference from :zhoukaiyin/
 
 @Author:Macan
+
+@ModifiedBy:dsindex
 """
 
 from __future__ import absolute_import
@@ -363,24 +366,22 @@ def create_model(bert_config, is_training, input_ids, input_mask,
                  segment_ids, labels, num_labels, use_one_hot_embeddings):
     model = modeling.BertModel(
         config=bert_config,
-        is_training=False,
+        is_training=False, # False for feature-based, True for fine-tuning
         input_ids=input_ids,
         input_mask=input_mask,
         token_type_ids=segment_ids,
         use_one_hot_embeddings=use_one_hot_embeddings
     )
-    embedding = model.get_sequence_output() # [batch_size, seq_length, embedding_size]
+    embedding = model.get_sequence_output() # (batch_size, seq_length, embedding_size)
     # embedding_size
     hidden_size = embedding.shape[-1].value
     seq_length = embedding.shape[1].value
 
     used = tf.sign(tf.abs(input_ids))
-    lengths = tf.reduce_sum(used, reduction_indices=1)  # [batch_size]
+    lengths = tf.reduce_sum(used, reduction_indices=1)  # (batch_size)
     print('seq_length', seq_length)
     print('lengths', lengths)
 
-    # add by macan for lstm-crf model for ner
-    # t = tf.transpose(output_layer, perm=[1, 0 ,2])
     def lstm_layer():
         with tf.variable_scope('lstm_layer'):
             lstm_cell = {}
@@ -399,7 +400,31 @@ def create_model(bert_config, is_training, input_ids, input_mask,
                 sequence_length=lengths)
             return tf.concat(outputs, axis=2)
 
-    def project_layer_bilstm(lstm_outputs, name=None):
+    def bi_lstm_fused(inputs, lengths, rnn_size, is_training, dropout_rate=0.5, scope='bi-lstm-fused'):
+        with tf.variable_scope(scope):
+            t = tf.transpose(inputs, perm=[1, 0, 2])  # Need time-major
+            lstm_cell_fw = tf.contrib.rnn.LSTMBlockFusedCell(rnn_size)
+            lstm_cell_bw = tf.contrib.rnn.LSTMBlockFusedCell(rnn_size)
+            lstm_cell_bw = tf.contrib.rnn.TimeReversedFusedRNN(lstm_cell_bw)
+            output_fw, _ = lstm_cell_fw(t, dtype=tf.float32, sequence_length=lengths)
+            output_bw, _ = lstm_cell_bw(t, dtype=tf.float32, sequence_length=lengths)
+            outputs = tf.concat([output_fw, output_bw], axis=-1)
+            outputs = tf.transpose(outputs, perm=[1, 0, 2])
+            return tf.layers.dropout(outputs, rate=dropout_rate, training=is_training)
+
+    def fused_lstm_layer():
+        rnn_output = tf.identity(embedding)
+        for i in range(2):
+            scope = 'bi-lstm-fused-%s' % i
+            rnn_output = bi_lstm_fused(rnn_output,
+                                       lengths,
+                                       rnn_size=FLAGS.lstm_size,
+                                       is_training=is_training,
+                                       dropout_rate=0.5,
+                                       scope=scope)  # (batch_size, sentence_length, 2*rnn_size)
+        return rnn_output
+
+    def project_layer(lstm_outputs, name=None):
         """
         hidden layer between lstm layer and logits
         :param lstm_outputs: [batch_size, num_steps, emb_size] 
@@ -444,8 +469,8 @@ def create_model(bert_config, is_training, input_ids, input_mask,
                 sequence_lengths=lengths)
             return tf.reduce_mean(-log_likelihood), trans
 
-    lstm_outputs = lstm_layer()
-    logits = project_layer_bilstm(lstm_outputs)
+    lstm_outputs = fused_lstm_layer()
+    logits = project_layer(lstm_outputs)
     loss, trans = loss_layer(logits)
     pred_ids, _ = crf.crf_decode(potentials=logits, transition_params=trans, sequence_length=lengths)
 

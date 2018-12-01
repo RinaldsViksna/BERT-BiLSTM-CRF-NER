@@ -1,7 +1,14 @@
 # NER evaluation for CoNLL 2003
 
-## How to run and evaluate
+## Modification
 
+- add multi-layered fused_lstm_layer() which uses LSTMBlockFusedCell.
+- add tf.train.LoggingTensorHook for printing loss while training.
+- add tf.estimator.train_and_evaluate() with stop_if_no_increase_hook()
+
+## How to train and evaluate
+
+### download BERT model
 ```
 * download BERT model
 
@@ -13,7 +20,10 @@ uncased_L-12_H-768_A-12:
 bert_config.json  bert_model.ckpt.data-00000-of-00001  bert_model.ckpt.index  bert_model.ckpt.meta  vocab.txt
 
 $ ln -s cased_L-12_H-768_A-12 checkpoint
+```
 
+### train
+```
 $ ./run.sh -v -v
 
 $ cat output/result_dir/predicted_results.txt
@@ -30,7 +40,10 @@ eval_precision = 0.9256314
 eval_recall = 0.97033226
 global_step = 1405
 loss = 1.3940833
+```
 
+### evaluate
+```
 $ more output/result_dir/label_test.txt
 
 [CLS]
