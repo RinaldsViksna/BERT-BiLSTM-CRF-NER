@@ -83,6 +83,8 @@ flags.DEFINE_bool("use_tpu", False, "Whether to use TPU or GPU/CPU.")
 
 flags.DEFINE_bool("do_predict", True, "Whether to run the model in inference mode on the test set.")
 
+flags.DEFINE_bool("use_crf", True, "Whether to use CRF decoding.")
+
 flags.DEFINE_integer("train_batch_size", 64, "Total batch size for training.")
 
 flags.DEFINE_integer("eval_batch_size", 8, "Total batch size for eval.")
@@ -117,7 +119,6 @@ flags.DEFINE_string('data_config_path', 'data.conf',
                     'data config file, which save train and dev config')
 
 flags.DEFINE_integer('lstm_size', 128, 'size of lstm units')
-
 
 class InputExample(object):
     """A single training/test example for simple sequence classification."""
@@ -425,11 +426,6 @@ def create_model(bert_config, is_training, input_ids, input_mask,
         return rnn_output
 
     def project_layer(lstm_outputs, name=None):
-        """
-        hidden layer between lstm layer and logits
-        :param lstm_outputs: [batch_size, num_steps, emb_size] 
-        :return: [batch_size, num_steps, num_tags]
-        """
         with tf.variable_scope("project" if not name else name):
             with tf.variable_scope("hidden"):
                 W = tf.get_variable("W", shape=[FLAGS.lstm_size * 2, FLAGS.lstm_size],
@@ -452,27 +448,34 @@ def create_model(bert_config, is_training, input_ids, input_mask,
             return tf.reshape(pred, [-1, seq_length, num_labels])
 
     def loss_layer(logits):
-        """
-        calculate crf loss
-        :param project_logits: [1, num_steps, num_tags]
-        :return: scalar loss
-        """
-        with tf.variable_scope("crf_loss"):
-            trans = tf.get_variable(
-                "transitions",
-                shape=[num_labels, num_labels],
-                initializer=initializers.xavier_initializer())
-            log_likelihood, trans = tf.contrib.crf.crf_log_likelihood(
-                inputs=logits,
-                tag_indices=labels,
-                transition_params=trans,
-                sequence_lengths=lengths)
-            return tf.reduce_mean(-log_likelihood), trans
-
+        trans = tf.get_variable(
+            "transitions",
+            shape=[num_labels, num_labels],
+            initializer=initializers.xavier_initializer())
+        if FLAGS.use_crf:
+            with tf.variable_scope("crf_loss"):
+                log_likelihood, trans = tf.contrib.crf.crf_log_likelihood(
+                    inputs=logits,
+                    tag_indices=labels,
+                    transition_params=trans,
+                    sequence_lengths=lengths)
+                return tf.reduce_mean(-log_likelihood), trans
+        else:
+            labels_one_hot = tf.one_hot(labels, num_labels)
+            cross_entropy = labels_one_hot * tf.log(tf.nn.softmax(logits))
+            cross_entropy = -tf.reduce_sum(cross_entropy, reduction_indices=2)
+            cross_entropy *= tf.to_float(input_mask)
+            cross_entropy = tf.reduce_sum(cross_entropy, reduction_indices=1)
+            cross_entropy /= tf.cast(lengths, tf.float32)
+            return tf.reduce_mean(cross_entropy), trans
+        
     lstm_outputs = fused_lstm_layer()
     logits = project_layer(lstm_outputs)
     loss, trans = loss_layer(logits)
-    pred_ids, _ = crf.crf_decode(potentials=logits, transition_params=trans, sequence_length=lengths)
+    if FLAGS.use_crf:
+        pred_ids, _ = crf.crf_decode(potentials=logits, transition_params=trans, sequence_length=lengths)
+    else:
+        pred_ids = tf.argmax(logits, 2)
 
     print('#' * 20)
     print('shape of output_layer:', embedding.shape)

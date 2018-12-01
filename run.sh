@@ -91,13 +91,14 @@ rm -rf ./output
 mkdir -p output/result_dir
 rm -rf data.conf
 
-lowercase='True'
-bert_model_dir=${CDIR}/uncased_L-12_H-768_A-12
+lowercase='False'
+bert_model_dir=${CDIR}/cased_L-12_H-768_A-12
 
 python bert_lstm_ner.py   \
         --task_name="NER"  \
         --do_train=True   \
         --do_predict=True \
+        --use_crf=True \
         --data_dir=${CDIR}/NERdata  \
         --vocab_file=${bert_model_dir}/vocab.txt  \
         --do_lower_case=${lowercase} \

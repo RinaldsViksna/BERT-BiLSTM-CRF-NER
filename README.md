@@ -34,6 +34,7 @@ INFO:tensorflow:No increase in metric "eval_f" for 1000 steps, which is greater 
 INFO:tensorflow:Requesting early stopping at global step 9999
 INFO:tensorflow:Loss for final step: 0.09923968.
 ...
+
 $ cat output/result_dir/predicted_results.txt
 # cased, fine-tuning, modeling.BertModel(..., is_training=is_training, ...)
 eval_f = 0.95199704

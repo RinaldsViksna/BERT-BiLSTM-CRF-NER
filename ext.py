@@ -8,11 +8,12 @@ class Ext:
 
     def __proc_bucket(self, bucket):
         # for '-DOCSTART-'
-        if len(bucket) == 2:
+        if bucket[1] == '[SEP]':
             print('O')
             print('')
             return None
-        for line in bucket[2:-1]:
+        for line in bucket[2:]:
+            if line == '[SEP]': break
             print(line)
         print('')
         return None
