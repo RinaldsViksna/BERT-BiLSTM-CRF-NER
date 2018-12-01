@@ -14,7 +14,7 @@ bert_config.json  bert_model.ckpt.data-00000-of-00001  bert_model.ckpt.index  be
 
 $ ln -s cased_L-12_H-768_A-12 checkpoint
 
-$ ./run.sh
+$ ./run.sh -v -v
 
 $ cat output/result_dir/predicted_results.txt
 #1. fine-tuning, modeling.BertModel(..., is_training=is_training, ...), num_train_epochs=3

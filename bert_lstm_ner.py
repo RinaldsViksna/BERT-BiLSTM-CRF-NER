@@ -39,25 +39,12 @@ flags = tf.flags
 FLAGS = flags.FLAGS
 
 flags.DEFINE_string(
-    "bert_path", './checkpoint',
-    "The BERT dir",
+    "data_dir", "NERdata",
+    "The input datadir."
 )
 
 flags.DEFINE_string(
-    "root_path", './BERT-BiLSTM-CRF-NER',
-    "The root path",
-)
-
-bert_path = FLAGS.bert_path
-root_path = FLAGS.root_path
-
-flags.DEFINE_string(
-    "data_dir", os.path.join(root_path, 'NERdata'),
-    "The input datadir.",
-)
-
-flags.DEFINE_string(
-    "bert_config_file", os.path.join(bert_path, 'bert_config.json'),
+    "bert_config_file", "bert_config.json",
     "The config json file corresponding to the pre-trained BERT model."
 )
 
@@ -66,12 +53,12 @@ flags.DEFINE_string(
 )
 
 flags.DEFINE_string(
-    "output_dir", os.path.join(root_path, 'output'),
+    "output_dir", "output",
     "The output directory where the model checkpoints will be written."
 )
 
 flags.DEFINE_string(
-    "init_checkpoint", os.path.join(bert_path, 'bert_model.ckpt'),
+    "init_checkpoint", "bert_model.ckpt",
     "Initial checkpoint (usually from a pre-trained BERT model)."
 )
 
@@ -114,7 +101,7 @@ flags.DEFINE_integer("save_checkpoints_steps", 1000,
 flags.DEFINE_integer("iterations_per_loop", 1000,
                      "How many steps to make in each estimator call.")
 
-flags.DEFINE_string("vocab_file", os.path.join(bert_path, 'vocab.txt'),
+flags.DEFINE_string("vocab_file", "vocab.txt",
                     "The vocabulary file that the BERT model was trained on.")
 
 flags.DEFINE_string("master", None, "[Optional] TensorFlow master URL.")
@@ -123,7 +110,7 @@ flags.DEFINE_integer(
     "num_tpu_cores", 8,
     "Only used if `use_tpu` is True. Total number of TPU cores to use.")
 
-flags.DEFINE_string('data_config_path', os.path.join(root_path, 'data.conf'),
+flags.DEFINE_string('data_config_path', 'data.conf',
                     'data config file, which save train and dev config')
 
 flags.DEFINE_integer('lstm_size', 128, 'size of lstm units')
@@ -684,7 +671,8 @@ def main(_):
             estimator, 'eval_f', 500, min_steps=8000, run_every_secs=120)
         train_spec = tf.estimator.TrainSpec(input_fn=train_input_fn, hooks=[hook])
         eval_spec = tf.estimator.EvalSpec(input_fn=eval_input_fn, throttle_secs=120)
-        result = tf.estimator.train_and_evaluate(estimator, train_spec, eval_spec)
+        tp = tf.estimator.train_and_evaluate(estimator, train_spec, eval_spec)
+        result = tp[0]
         
         output_eval_file = os.path.join(FLAGS.output_dir, "eval_results.txt")
         with codecs.open(output_eval_file, "w", encoding='utf-8') as writer:
