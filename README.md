@@ -18,28 +18,36 @@ bert_config.json  bert_model.ckpt.data-00000-of-00001  bert_model.ckpt.index  be
 
 uncased_L-12_H-768_A-12:
 bert_config.json  bert_model.ckpt.data-00000-of-00001  bert_model.ckpt.index  bert_model.ckpt.meta  vocab.txt
-
-$ ln -s cased_L-12_H-768_A-12 checkpoint
 ```
 
 ### train
 ```
+* edit 'bert_model_dir'
+* edit 'lowercase=False' for cased BERT model, 'lowercase=True' for uncased.
 $ ./run.sh -v -v
-
+...
+INFO:tensorflow:Saving dict for global step 9000: eval_f = 0.99398285, eval_precision = 0.99777675, eval_recall = 0.9763537, global_step = 9000, loss = 0.8441832
+...
+INFO:tensorflow:Saving dict for global step 10000: eval_f = 0.9921655, eval_precision = 0.99355906, eval_recall = 0.9877674, global_step = 10000, loss = 0.8441832
+...
+INFO:tensorflow:No increase in metric "eval_f" for 1000 steps, which is greater than or equal to max steps (500) configured for early stopping.
+INFO:tensorflow:Requesting early stopping at global step 9999
+INFO:tensorflow:Loss for final step: 0.09923968.
+...
 $ cat output/result_dir/predicted_results.txt
-#1. fine-tuning, modeling.BertModel(..., is_training=is_training, ...), num_train_epochs=3
-eval_f = 0.95154184
-eval_precision = 0.9613734
-eval_recall = 0.9507772
-global_step = 1405
-loss = 1.3503028
+# cased, fine-tuning, modeling.BertModel(..., is_training=is_training, ...)
+eval_f = 0.95199704
+eval_precision = 0.9795157
+eval_recall = 0.97033
+global_step = 10000
+loss = 2.1361291
 
-#2. feature-based, modeling.BertModel(..., is_training=False, ...), num_train_epochs=3
-eval_f = 0.95870125
-eval_precision = 0.9256314
-eval_recall = 0.97033226
-global_step = 1405
-loss = 1.3940833
+# cased, feature-based, modeling.BertModel(..., is_training=False, ...)
+eval_f = 0.9801688
+eval_precision = 0.86159223
+eval_recall = 0.97741973
+global_step = 9101
+loss = 3.310536
 ```
 
 ### evaluate
@@ -62,24 +70,25 @@ X
 ...
 
 $ python ext.py < output/result_dir/label_test.txt > label.txt
-$ python tok.py --vocab_file checkpoint/vocab.txt --do_lower_case False < NERdata/test.txt > test.txt.tok
+$ lowercase='False'
+$ python tok.py --vocab_file cased_L-12_H-768_A-12/vocab.txt --do_lower_case ${lowercase} < NERdata/test.txt > test.txt.tok
 $ python merge.py --a_path test.txt.tok --b_path label.txt > pred.txt
 $ perl conlleval.pl < pred.txt
-#1. fine-tuning
-processed 46476 tokens with 5596 phrases; found: 5706 phrases; correct: 5114.
-accuracy:  98.14%; precision:  89.62%; recall:  91.39%; FB1:  90.50
-              LOC: precision:  92.74%; recall:  92.68%; FB1:  92.71  1652
-             MISC: precision:  74.23%; recall:  82.48%; FB1:  78.14  780
-              ORG: precision:  88.69%; recall:  89.76%; FB1:  89.22  1680
-              PER: precision:  94.92%; recall:  95.70%; FB1:  95.31  1594 
+# cased, fine-tuning
+processed 46666 tokens with 5648 phrases; found: 5728 phrases; correct: 5170.
+accuracy:  98.20%; precision:  90.26%; recall:  91.54%; FB1:  90.89
+              LOC: precision:  92.41%; recall:  93.41%; FB1:  92.90  1686
+             MISC: precision:  77.66%; recall:  82.19%; FB1:  79.86  743
+              ORG: precision:  88.24%; recall:  90.31%; FB1:  89.26  1700
+              PER: precision:  96.00%; recall:  94.93%; FB1:  95.46  1599
 
-#2. feature-based
-processed 46666 tokens with 5648 phrases; found: 5758 phrases; correct: 5147.
-accuracy:  98.14%; precision:  89.39%; recall:  91.13%; FB1:  90.25
-              LOC: precision:  93.12%; recall:  91.73%; FB1:  92.42  1643
-             MISC: precision:  74.19%; recall:  81.91%; FB1:  77.86  775
-              ORG: precision:  86.77%; recall:  90.01%; FB1:  88.36  1723
-              PER: precision:  95.67%; recall:  95.67%; FB1:  95.67  1617
+# cased, feautre-based
+processed 46666 tokens with 5648 phrases; found: 5730 phrases; correct: 5146.
+accuracy:  98.16%; precision:  89.81%; recall:  91.11%; FB1:  90.46
+              LOC: precision:  92.00%; recall:  93.11%; FB1:  92.55  1688
+             MISC: precision:  75.89%; recall:  81.62%; FB1:  78.65  755
+              ORG: precision:  87.87%; recall:  89.40%; FB1:  88.63  1690
+              PER: precision:  96.12%; recall:  94.93%; FB1:  95.52  1597
 ```
 
 ----

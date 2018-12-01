@@ -366,7 +366,7 @@ def create_model(bert_config, is_training, input_ids, input_mask,
                  segment_ids, labels, num_labels, use_one_hot_embeddings):
     model = modeling.BertModel(
         config=bert_config,
-        is_training=False, # False for feature-based, True for fine-tuning
+        is_training=is_training, # False for feature-based, is_training for fine-tuning
         input_ids=input_ids,
         input_mask=input_mask,
         token_type_ids=segment_ids,
@@ -693,7 +693,7 @@ def main(_):
             drop_remainder=eval_drop_remainder)
         # train and evaluate 
         hook = tf.contrib.estimator.stop_if_no_increase_hook(
-            estimator, 'eval_f', 500, min_steps=8000, run_every_secs=120)
+            estimator, 'eval_f', 3000, min_steps=5000, run_every_secs=120)
         train_spec = tf.estimator.TrainSpec(input_fn=train_input_fn, hooks=[hook])
         eval_spec = tf.estimator.EvalSpec(input_fn=eval_input_fn, throttle_secs=120)
         tp = tf.estimator.train_and_evaluate(estimator, train_spec, eval_spec)

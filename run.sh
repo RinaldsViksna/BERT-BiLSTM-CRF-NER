@@ -91,18 +91,26 @@ rm -rf ./output
 mkdir -p output/result_dir
 rm -rf data.conf
 
+lowercase='True'
+bert_model_dir=${CDIR}/uncased_L-12_H-768_A-12
+
 python bert_lstm_ner.py   \
         --task_name="NER"  \
         --do_train=True   \
         --do_predict=True \
         --data_dir=${CDIR}/NERdata  \
-        --vocab_file=${CDIR}/checkpoint/vocab.txt  \
-        --do_lower_case=False \
-        --bert_config_file=${CDIR}/checkpoint/bert_config.json \
-        --init_checkpoint=${CDIR}/checkpoint/bert_model.ckpt   \
+        --vocab_file=${bert_model_dir}/vocab.txt  \
+        --do_lower_case=${lowercase} \
+        --bert_config_file=${bert_model_dir}/bert_config.json \
+        --init_checkpoint=${bert_model_dir}/bert_model.ckpt   \
         --max_seq_length=150   \
         --train_batch_size=32   \
         --learning_rate=2e-5   \
         --num_train_epochs=30   \
         --data_config_path=${CDIR}/data.conf \
         --output_dir=${CDIR}/output/result_dir/
+
+python ext.py < ${CDIR}/output/result_dir/label_test.txt > label.txt
+python tok.py --vocab_file ${bert_model_dir}/vocab.txt --do_lower_case ${lowercase} < ${CDIR}/NERdata/test.txt > test.txt.tok
+python merge.py --a_path test.txt.tok --b_path label.txt > pred.txt
+perl conlleval.pl < pred.txt
