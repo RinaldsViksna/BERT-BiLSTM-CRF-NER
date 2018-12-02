@@ -25,23 +25,14 @@ bert_config.json  bert_model.ckpt.data-00000-of-00001  bert_model.ckpt.index  be
 * edit 'bert_model_dir'
 * edit 'lowercase=False' for cased BERT model, 'lowercase=True' for uncased.
 $ ./run.sh -v -v
-...
-INFO:tensorflow:Saving dict for global step 9000: eval_f = 0.99398285, eval_precision = 0.99777675, eval_recall = 0.9763537, global_step = 9000, loss = 0.8441832
-...
-INFO:tensorflow:Saving dict for global step 10000: eval_f = 0.9921655, eval_precision = 0.99355906, eval_recall = 0.9877674, global_step = 10000, loss = 0.8441832
-...
-INFO:tensorflow:No increase in metric "eval_f" for 1000 steps, which is greater than or equal to max steps (500) configured for early stopping.
-INFO:tensorflow:Requesting early stopping at global step 9999
-INFO:tensorflow:Loss for final step: 0.09923968.
-...
 
 $ cat output/result_dir/predicted_results.txt
 # cased, fine-tuning, modeling.BertModel(..., is_training=is_training, ...)
-eval_f = 0.95199704
-eval_precision = 0.9795157
-eval_recall = 0.97033
-global_step = 10000
-loss = 2.1361291
+eval_f = 0.9771129
+eval_precision = 0.98195297
+eval_recall = 0.9791255
+global_step = 13122
+loss = 3.2886324
 
 # cased, feature-based, modeling.BertModel(..., is_training=False, ...)
 eval_f = 0.9801688
@@ -76,12 +67,12 @@ $ python tok.py --vocab_file cased_L-12_H-768_A-12/vocab.txt --do_lower_case ${l
 $ python merge.py --a_path test.txt.tok --b_path label.txt > pred.txt
 $ perl conlleval.pl < pred.txt
 # cased, fine-tuning
-processed 46666 tokens with 5648 phrases; found: 5728 phrases; correct: 5170.
-accuracy:  98.20%; precision:  90.26%; recall:  91.54%; FB1:  90.89
-              LOC: precision:  92.41%; recall:  93.41%; FB1:  92.90  1686
-             MISC: precision:  77.66%; recall:  82.19%; FB1:  79.86  743
-              ORG: precision:  88.24%; recall:  90.31%; FB1:  89.26  1700
-              PER: precision:  96.00%; recall:  94.93%; FB1:  95.46  1599
+processed 46666 tokens with 5648 phrases; found: 5714 phrases; correct: 5188.
+accuracy:  98.26%; precision:  90.79%; recall:  91.86%; FB1:  91.32
+              LOC: precision:  92.47%; recall:  93.47%; FB1:  92.96  1686
+             MISC: precision:  77.95%; recall:  83.62%; FB1:  80.69  753
+              ORG: precision:  89.14%; recall:  90.43%; FB1:  89.78  1685
+              PER: precision:  96.86%; recall:  95.24%; FB1:  96.04  1590
 
 # cased, feautre-based
 processed 46666 tokens with 5648 phrases; found: 5730 phrases; correct: 5146.

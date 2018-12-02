@@ -105,6 +105,7 @@ python bert_lstm_ner.py   \
         --bert_config_file=${bert_model_dir}/bert_config.json \
         --init_checkpoint=${bert_model_dir}/bert_model.ckpt   \
         --max_seq_length=150   \
+        --lstm_size=128 \
         --train_batch_size=32   \
         --learning_rate=2e-5   \
         --num_train_epochs=30   \
