@@ -696,7 +696,7 @@ def main(_):
             drop_remainder=eval_drop_remainder)
         # train and evaluate 
         hook = tf.contrib.estimator.stop_if_no_increase_hook(
-            estimator, 'eval_f', 3000, min_steps=5000, run_every_secs=120)
+            estimator, 'eval_f', 1000, min_steps=5000, run_every_secs=120)
         train_spec = tf.estimator.TrainSpec(input_fn=train_input_fn, hooks=[hook])
         eval_spec = tf.estimator.EvalSpec(input_fn=eval_input_fn, throttle_secs=120)
         tp = tf.estimator.train_and_evaluate(estimator, train_spec, eval_spec)
