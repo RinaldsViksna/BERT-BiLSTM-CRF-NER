@@ -27,6 +27,7 @@ bert_config.json  bert_model.ckpt.data-00000-of-00001  bert_model.ckpt.index  be
 * edit 'bert_model_dir'
 * edit 'lowercase=False' for cased BERT model, 'lowercase=True' for uncased.
 $ ./train.sh -v -v
+$ tensorboard --logdir output/result_dir/ --port 6008
 ```
 
 ### predict
