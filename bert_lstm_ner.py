@@ -28,7 +28,6 @@ from tensorflow.contrib import crf
 from tensorflow.contrib import rnn, cudnn_rnn
 
 from tensorflow.contrib.tpu import TPUEstimator, TPUConfig
-from sklearn.metrics import f1_score, precision_score, recall_score
 from tensorflow.python.ops import math_ops
 
 import tf_metrics
@@ -42,22 +41,22 @@ flags = tf.flags
 FLAGS = flags.FLAGS
 
 flags.DEFINE_string(
-    "data_dir", "NERdata",
-    "The input datadir."
+    "data_dir", None,
+    "The input datadir. ex) 'NERdata'"
 )
 
 flags.DEFINE_string(
-    "bert_config_file", "bert_config.json",
-    "The config json file corresponding to the pre-trained BERT model."
+    "bert_config_file", None,
+    "The config json file corresponding to the pre-trained BERT model. ex) 'bert_config.json'"
 )
 
 flags.DEFINE_string(
-    "task_name", 'ner', "The name of the task to train."
+    "task_name", None, "The name of the task to train. ex) 'NER'"
 )
 
 flags.DEFINE_string(
-    "output_dir", "output",
-    "The output directory where the model checkpoints will be written."
+    "output_dir", None,
+    "The output directory where the model checkpoints will be written. ex) 'output'"
 )
 
 flags.DEFINE_string(
@@ -103,11 +102,17 @@ flags.DEFINE_float(
 flags.DEFINE_integer("save_checkpoints_steps", 1000,
                      "How often to save the model checkpoint.")
 
+flags.DEFINE_integer("save_summary_steps", 100,
+                     "Save summaries every this many steps")
+
+flags.DEFINE_integer("keep_checkpoint_max", 5,
+                  "The maximum number of recent checkpoint files to keep")
+
 flags.DEFINE_integer("iterations_per_loop", 1000,
                      "How many steps to make in each estimator call.")
 
-flags.DEFINE_string("vocab_file", "vocab.txt",
-                    "The vocabulary file that the BERT model was trained on.")
+flags.DEFINE_string("vocab_file", None,
+                    "The vocabulary file that the BERT model was trained on. ex) 'vocab.txt'")
 
 flags.DEFINE_string("master", None, "[Optional] TensorFlow master URL.")
 
@@ -334,7 +339,6 @@ def file_based_input_fn_builder(input_file, seq_length, is_training, drop_remain
         "input_mask": tf.FixedLenFeature([seq_length], tf.int64),
         "segment_ids": tf.FixedLenFeature([seq_length], tf.int64),
         "label_ids": tf.FixedLenFeature([seq_length], tf.int64),
-        # "label_ids":tf.VarLenFeature(tf.int64),
         # "label_mask": tf.FixedLenFeature([seq_length], tf.int64),
     }
 
@@ -421,7 +425,7 @@ def create_model(bert_config, is_training, input_ids, input_mask,
                                        lengths,
                                        rnn_size=FLAGS.lstm_size,
                                        is_training=is_training,
-                                       dropout_rate=0.5,
+                                       dropout_rate=0.2, # 0.5 -> 0.2
                                        scope=scope)  # (batch_size, sentence_length, 2*rnn_size)
         return rnn_output
 
@@ -501,6 +505,7 @@ def model_fn_builder(bert_config, num_labels, init_checkpoint, learning_rate,
         label_ids = features["label_ids"]
 
         print('shape of input_ids', input_ids.shape)
+        print('shape of label_ids', label_ids.shape)
         # label_mask = features["label_mask"]
         is_training = (mode == tf.estimator.ModeKeys.TRAIN)
 
@@ -508,9 +513,14 @@ def model_fn_builder(bert_config, num_labels, init_checkpoint, learning_rate,
             bert_config, is_training, input_ids, input_mask, segment_ids, label_ids,
             num_labels, use_one_hot_embeddings)
 
+        print('shape of pred_ids', pred_ids.shape)
+
+        # add loss summary
+        tf.summary.scalar('loss', total_loss)
+
         tvars = tf.trainable_variables()
         scaffold_fn = None
-        if init_checkpoint:
+        if init_checkpoint and is_training:
             (assignment_map, initialized_variable_names) = modeling.get_assignment_map_from_checkpoint(tvars,
                                                                                                        init_checkpoint)
             tf.train.init_from_checkpoint(init_checkpoint, assignment_map)
@@ -523,50 +533,51 @@ def model_fn_builder(bert_config, num_labels, init_checkpoint, learning_rate,
             else:
                 tf.train.init_from_checkpoint(init_checkpoint, assignment_map)
 
-        tf.logging.info("**** Trainable Variables ****")
+            tf.logging.info("**** Trainable Variables ****")
 
-        for var in tvars:
-            init_string = ""
-            if var.name in initialized_variable_names:
-                init_string = ", *INIT_FROM_CKPT*"
-            tf.logging.info("  name = %s, shape = %s%s", var.name, var.shape,
-                            init_string)
+            for var in tvars:
+                init_string = ""
+                if var.name in initialized_variable_names:
+                    init_string = ", *INIT_FROM_CKPT*"
+                tf.logging.info("  name = %s, shape = %s%s", var.name, var.shape,
+                                init_string)
         output_spec = None
-        if mode == tf.estimator.ModeKeys.TRAIN:
-            train_op = optimization.create_optimizer(
-                total_loss, learning_rate, num_train_steps, num_warmup_steps, use_tpu)
-            logging_hook = tf.train.LoggingTensorHook({"loss" : total_loss}, every_n_iter=10)
-            output_spec = tf.contrib.tpu.TPUEstimatorSpec(
-                mode=mode,
-                loss=total_loss,
-                train_op=train_op,
-                training_hooks = [logging_hook],
-                scaffold_fn=scaffold_fn)
-        elif mode == tf.estimator.ModeKeys.EVAL:
-            def metric_fn(label_ids, logits, trans):
-                weight = tf.sequence_mask(FLAGS.max_seq_length)
-                precision = tf_metrics.precision(label_ids, pred_ids, num_labels, [2, 3, 4, 5, 6, 7], weight)
-                recall = tf_metrics.recall(label_ids, pred_ids, num_labels, [2, 3, 4, 5, 6, 7], weight)
-                f = tf_metrics.f1(label_ids, pred_ids, num_labels, [2, 3, 4, 5, 6, 7], weight)
-                return {
-                    "eval_precision": precision,
-                    "eval_recall": recall,
-                    "eval_f": f,
-                    # "eval_loss": loss,
-                }
-
-            eval_metrics = (metric_fn, [label_ids, logits, trans])
-            output_spec = tf.contrib.tpu.TPUEstimatorSpec(
-                mode=mode,
-                loss=total_loss,
-                eval_metrics=eval_metrics,
-                scaffold_fn=scaffold_fn)
-        else:
+        if mode == tf.estimator.ModeKeys.PREDICT:
             output_spec = tf.contrib.tpu.TPUEstimatorSpec(
                 mode=mode,
                 predictions=pred_ids,
                 scaffold_fn=scaffold_fn
             )
+        else:
+            if mode == tf.estimator.ModeKeys.TRAIN:
+                train_op = optimization.create_optimizer(
+                    total_loss, learning_rate, num_train_steps, num_warmup_steps, use_tpu)
+                logging_hook = tf.train.LoggingTensorHook({"loss" : total_loss}, every_n_iter=10)
+                output_spec = tf.contrib.tpu.TPUEstimatorSpec(
+                    mode=mode,
+                    loss=total_loss,
+                    train_op=train_op,
+                    training_hooks = [logging_hook],
+                    scaffold_fn=scaffold_fn)
+            else: # mode == tf.estimator.ModeKeys.EVAL:
+                def metric_fn(label_ids, pred_ids, logits, trans):
+                    weight = tf.sequence_mask(FLAGS.max_seq_length)
+                    # ['<pad>'] + ["O", "B-PER", "I-PER", "B-ORG", "I-ORG", "B-LOC", "I-LOC", "B-MISC", "I-MISC", "X", "[CLS]", "[SEP]"]
+                    indices = [2, 3, 4, 5, 6, 7, 8, 9]
+                    precision = tf_metrics.precision(label_ids, pred_ids, num_labels, indices, weight)
+                    recall = tf_metrics.recall(label_ids, pred_ids, num_labels, indices, weight)
+                    f = tf_metrics.f1(label_ids, pred_ids, num_labels, indices, weight)
+                    return {
+                        'eval_precision': precision,
+                        'eval_recall': recall,
+                        'eval_f': f,
+                    }
+                eval_metrics = (metric_fn, [label_ids, pred_ids, logits, trans])
+                output_spec = tf.contrib.tpu.TPUEstimatorSpec(
+                    mode=mode,
+                    loss=total_loss,
+                    eval_metrics=eval_metrics,
+                    scaffold_fn=scaffold_fn)
         return output_spec
 
     return model_fn
@@ -607,6 +618,8 @@ def main(_):
         master=FLAGS.master,
         model_dir=FLAGS.output_dir,
         save_checkpoints_steps=FLAGS.save_checkpoints_steps,
+        keep_checkpoint_max=FLAGS.keep_checkpoint_max,
+        save_summary_steps=FLAGS.save_summary_steps,
         tpu_config=tf.contrib.tpu.TPUConfig(
             iterations_per_loop=FLAGS.iterations_per_loop,
             num_shards=FLAGS.num_tpu_cores,
@@ -637,7 +650,7 @@ def main(_):
 
     model_fn = model_fn_builder(
         bert_config=bert_config,
-        num_labels=len(label_list) + 1,
+        num_labels=len(label_list) + 1, # 1 for '0' padding
         init_checkpoint=FLAGS.init_checkpoint,
         learning_rate=FLAGS.learning_rate,
         num_train_steps=num_train_steps,
@@ -696,7 +709,7 @@ def main(_):
             drop_remainder=eval_drop_remainder)
         # train and evaluate 
         hook = tf.contrib.estimator.stop_if_no_increase_hook(
-            estimator, 'eval_f', 1000, min_steps=5000, run_every_secs=120)
+            estimator, 'eval_f', 2000, min_steps=5000, run_every_secs=120)
         train_spec = tf.estimator.TrainSpec(input_fn=train_input_fn, hooks=[hook])
         eval_spec = tf.estimator.EvalSpec(input_fn=eval_input_fn, throttle_secs=120)
         tp = tf.estimator.train_and_evaluate(estimator, train_spec, eval_spec)
@@ -757,9 +770,6 @@ def main(_):
 
         result = estimator.predict(input_fn=predict_input_fn)
         output_predict_file = os.path.join(FLAGS.output_dir, "label_test.txt")
-
-        def result_to_json():
-            pass
 
         print('*' * 20)
         print('type of result:%s, type of predict_examples:%s' % (type(result), type(predict_examples)))
