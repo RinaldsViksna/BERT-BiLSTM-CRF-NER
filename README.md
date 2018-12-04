@@ -2,6 +2,8 @@
 
 ## Modification
 
+- modify the project for CoNLL 2003 data.
+- add train.sh, predict.sh
 - add multi-layered fused_lstm_layer() which uses LSTMBlockFusedCell.
 - add tf.train.LoggingTensorHook for printing loss while training.
 - add tf.estimator.train_and_evaluate() with stop_if_no_increase_hook()
