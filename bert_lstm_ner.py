@@ -561,7 +561,8 @@ def model_fn_builder(bert_config, num_labels, init_checkpoint, learning_rate,
                 def metric_fn(label_ids, pred_ids, logits, trans):
                     weight = tf.sequence_mask(FLAGS.max_seq_length)
                     # ['<pad>'] + ["O", "B-PER", "I-PER", "B-ORG", "I-ORG", "B-LOC", "I-LOC", "B-MISC", "I-MISC", "X", "[CLS]", "[SEP]"]
-                    indices = [2, 3, 4, 5, 6, 7, 8, 9]
+                    #indices = [2, 3, 4, 5, 6, 7, 8, 9]
+                    indices = None
                     precision = tf_metrics.precision(label_ids, pred_ids, num_labels, indices, weight)
                     recall = tf_metrics.recall(label_ids, pred_ids, num_labels, indices, weight)
                     f = tf_metrics.f1(label_ids, pred_ids, num_labels, indices, weight)
