@@ -86,12 +86,13 @@ export -f readlink
 CDIR=$(readlink -f $(dirname $(readlink -f ${BASH_SOURCE[0]})))
 PDIR=$(readlink -f $(dirname $(readlink -f ${BASH_SOURCE[0]}))/..)
 
-lowercase='False'
-bert_model_dir=${CDIR}/cased_L-12_H-768_A-12
+lowercase='True'
+bert_model_dir=${CDIR}/uncased_L-12_H-768_A-12
 
 python bert_lstm_ner.py   \
         --task_name="NER"  \
         --do_train=False   \
+        --use_feature_based=False \
         --do_predict=True \
         --use_crf=True \
         --data_dir=${CDIR}/NERdata  \
@@ -100,7 +101,8 @@ python bert_lstm_ner.py   \
         --bert_config_file=${bert_model_dir}/bert_config.json \
         --max_seq_length=150   \
         --lstm_size=128 \
-        --predict_batch_size=8   \
+        --eval_batch_size=128   \
+        --predict_batch_size=128   \
         --data_config_path=${CDIR}/data.conf \
         --output_dir=${CDIR}/output/result_dir/
 

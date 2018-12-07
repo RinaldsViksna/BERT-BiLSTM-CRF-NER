@@ -20,7 +20,6 @@ if __name__ == '__main__':
             a_data.append(entry)
             bucket = []
         else:
-            # tokenizing and extend
             bucket.append(line)
 
     b_data = []
@@ -33,10 +32,19 @@ if __name__ == '__main__':
             bucket = []
         else: bucket.append(line)
 
+    '''
+    print(len(a_data))
+    print(len(b_data))
+    for idx in range(len(a_data)):
+        print(len(a_data[idx]), len(b_data[idx]))
+    sys.exit(0)
+    '''
+
     idx = 0
     for idx, _ in enumerate(a_data):
         if len(a_data[idx]) != len(b_data[idx]):
-            continue
+            sys.stderr.write('merge error!')
+            break
             print('[before]')
             for a_line in a_data[idx-1]:
                 print(a_line)

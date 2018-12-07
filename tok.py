@@ -18,15 +18,20 @@ class Tok:
             tag  = tokens[3]
             # for '-DOCSTART-'
             if word == '-DOCSTART-':
+                '''
                 print(word, pos, chunk, tag)
-                continue
+                break
+                '''
+                return None
             word_exts = self.tokenizer.tokenize(word)
             for m in range(len(word_exts)):
                 if m == 0:
                     print(word_exts[m], pos, chunk, tag)
                 else:
                     print(word_exts[m], pos, chunk, 'X')
+
         print('')
+        return None
 
     def proc(self):
         bucket = []

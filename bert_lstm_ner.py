@@ -78,6 +78,10 @@ flags.DEFINE_bool(
     "do_train", True,
     "Whether to run training."
 )
+
+flags.DEFINE_bool("use_feature_based", False,
+    "Whether to use feature-based BERT model(do not fine-tuning).")
+
 flags.DEFINE_bool("use_tpu", False, "Whether to use TPU or GPU/CPU.")
 
 flags.DEFINE_bool("do_predict", True, "Whether to run the model in inference mode on the test set.")
@@ -105,7 +109,7 @@ flags.DEFINE_integer("save_checkpoints_steps", 1000,
 flags.DEFINE_integer("save_summary_steps", 100,
                      "Save summaries every this many steps")
 
-flags.DEFINE_integer("keep_checkpoint_max", 5,
+flags.DEFINE_integer("keep_checkpoint_max", 10,
                   "The maximum number of recent checkpoint files to keep")
 
 flags.DEFINE_integer("iterations_per_loop", 1000,
@@ -211,7 +215,10 @@ class NerProcessor(DataProcessor):
             self._read_data(os.path.join(data_dir, "test.txt")), "test")
 
     def get_labels(self):
+        '''
         return ["O", "B-PER", "I-PER", "B-ORG", "I-ORG", "B-LOC", "I-LOC", "B-MISC", "I-MISC", "X", "[CLS]", "[SEP]"]
+        '''
+        return ["O", "B-PER", "I-PER", "B-ORG", "I-ORG", "B-LOC", "I-LOC", "B-MISC", "I-MISC", "X"]
 
     def _create_example(self, lines, set_type):
         examples = []
@@ -262,7 +269,8 @@ def convert_single_example(ex_index, example, label_list, max_seq_length, tokeni
     ntokens.append("[CLS]")
     segment_ids.append(0)
     # append("O") or append("[CLS]") not sure!
-    label_ids.append(label_map["[CLS]"])
+    #label_ids.append(label_map["[CLS]"])
+    label_ids.append(0)
     for i, token in enumerate(tokens):
         ntokens.append(token)
         segment_ids.append(0)
@@ -270,7 +278,8 @@ def convert_single_example(ex_index, example, label_list, max_seq_length, tokeni
     ntokens.append("[SEP]")
     segment_ids.append(0)
     # append("O") or append("[SEP]") not sure!
-    label_ids.append(label_map["[SEP]"])
+    #label_ids.append(label_map["[SEP]"])
+    label_ids.append(0)
     input_ids = tokenizer.convert_tokens_to_ids(ntokens)
     input_mask = [1] * len(input_ids)
     # label_mask = [1] * len(input_ids)
@@ -369,41 +378,28 @@ def file_based_input_fn_builder(input_file, seq_length, is_training, drop_remain
 
 def create_model(bert_config, is_training, input_ids, input_mask,
                  segment_ids, labels, num_labels, use_one_hot_embeddings):
+
+    is_training_for_bert = is_training
+    if FLAGS.use_feature_based: is_training_for_bert = False
     model = modeling.BertModel(
         config=bert_config,
-        is_training=is_training, # False for feature-based, is_training for fine-tuning
+        is_training=is_training_for_bert, # False for feature-based, is_training for fine-tuning
         input_ids=input_ids,
         input_mask=input_mask,
         token_type_ids=segment_ids,
         use_one_hot_embeddings=use_one_hot_embeddings
     )
     embedding = model.get_sequence_output() # (batch_size, seq_length, embedding_size)
-    # embedding_size
-    hidden_size = embedding.shape[-1].value
+    if is_training:
+        # dropout embedding
+        embedding = tf.layers.dropout(embedding, rate=0.2, training=is_training)
+    embedding_size = embedding.shape[-1].value # embedding_size
     seq_length = embedding.shape[1].value
 
     used = tf.sign(tf.abs(input_ids))
     lengths = tf.reduce_sum(used, reduction_indices=1)  # (batch_size)
     print('seq_length', seq_length)
     print('lengths', lengths)
-
-    def lstm_layer():
-        with tf.variable_scope('lstm_layer'):
-            lstm_cell = {}
-            for direction in ["forward", "backward"]:
-                with tf.variable_scope(direction):
-                    lstm_cell[direction] = rnn.CoupledInputForgetGateLSTMCell(
-                        FLAGS.lstm_size,
-                        use_peepholes=True,
-                        initializer=initializers.xavier_initializer(),
-                        state_is_tuple=True)
-            outputs, final_states = tf.nn.bidirectional_dynamic_rnn(
-                lstm_cell["forward"],
-                lstm_cell["backward"],
-                embedding,
-                dtype=tf.float32,
-                sequence_length=lengths)
-            return tf.concat(outputs, axis=2)
 
     def bi_lstm_fused(inputs, lengths, rnn_size, is_training, dropout_rate=0.5, scope='bi-lstm-fused'):
         with tf.variable_scope(scope):
@@ -417,53 +413,45 @@ def create_model(bert_config, is_training, input_ids, input_mask,
             outputs = tf.transpose(outputs, perm=[1, 0, 2])
             return tf.layers.dropout(outputs, rate=dropout_rate, training=is_training)
 
-    def fused_lstm_layer():
-        rnn_output = tf.identity(embedding)
+    def lstm_layer(inputs, lengths, is_training):
+        rnn_output = tf.identity(inputs)
         for i in range(2):
             scope = 'bi-lstm-fused-%s' % i
             rnn_output = bi_lstm_fused(rnn_output,
                                        lengths,
                                        rnn_size=FLAGS.lstm_size,
                                        is_training=is_training,
-                                       dropout_rate=0.2, # 0.5 -> 0.2
-                                       scope=scope)  # (batch_size, sentence_length, 2*rnn_size)
+                                       dropout_rate=0.2,
+                                       scope=scope)  # (batch_size, seq_length, 2*rnn_size)
         return rnn_output
 
-    def project_layer(lstm_outputs, name=None):
-        with tf.variable_scope("project" if not name else name):
-            with tf.variable_scope("hidden"):
-                W = tf.get_variable("W", shape=[FLAGS.lstm_size * 2, FLAGS.lstm_size],
-                                    dtype=tf.float32, initializer=initializers.xavier_initializer())
-
-                b = tf.get_variable("b", shape=[FLAGS.lstm_size], dtype=tf.float32,
+    def project_layer(inputs, out_dim, seq_length, scope='project'):
+        with tf.variable_scope(scope):
+            in_dim = inputs.get_shape().as_list()[-1]
+            weight = tf.get_variable('W', shape=[in_dim, out_dim],
+                                     dtype=tf.float32, initializer=initializers.xavier_initializer())
+            bias = tf.get_variable('b', shape=[out_dim], dtype=tf.float32,
                                     initializer=tf.zeros_initializer())
-                output = tf.reshape(lstm_outputs, shape=[-1, FLAGS.lstm_size * 2])
-                hidden = tf.tanh(tf.nn.xw_plus_b(output, W, b))
+            t_output = tf.reshape(inputs, [-1, in_dim])            # (batch_size*seq_length, in_dim)
+            output = tf.matmul(t_output, weight) + bias            # (batch_size*seq_length, out_dim)
+            output = tf.reshape(output, [-1, seq_length, out_dim]) # (batch_size, seq_length, out_dim)
+            return output
 
-            # project to score of tags
-            with tf.variable_scope("logits"):
-                W = tf.get_variable("W", shape=[FLAGS.lstm_size, num_labels],
-                                    dtype=tf.float32, initializer=initializers.xavier_initializer())
-
-                b = tf.get_variable("b", shape=[num_labels], dtype=tf.float32,
-                                    initializer=tf.zeros_initializer())
-
-                pred = tf.nn.xw_plus_b(hidden, W, b)
-            return tf.reshape(pred, [-1, seq_length, num_labels])
-
-    def loss_layer(logits):
+    def loss_layer(logits, labels, num_labels, lengths, input_mask):
         trans = tf.get_variable(
             "transitions",
             shape=[num_labels, num_labels],
             initializer=initializers.xavier_initializer())
         if FLAGS.use_crf:
-            with tf.variable_scope("crf_loss"):
+            with tf.variable_scope("crf-loss"):
                 log_likelihood, trans = tf.contrib.crf.crf_log_likelihood(
                     inputs=logits,
                     tag_indices=labels,
                     transition_params=trans,
                     sequence_lengths=lengths)
-                return tf.reduce_mean(-log_likelihood), trans
+                per_example_loss = -log_likelihood
+                loss = tf.reduce_mean(per_example_loss)
+                return loss, per_example_loss, trans
         else:
             labels_one_hot = tf.one_hot(labels, num_labels)
             cross_entropy = labels_one_hot * tf.log(tf.nn.softmax(logits))
@@ -471,25 +459,32 @@ def create_model(bert_config, is_training, input_ids, input_mask,
             cross_entropy *= tf.to_float(input_mask)
             cross_entropy = tf.reduce_sum(cross_entropy, reduction_indices=1)
             cross_entropy /= tf.cast(lengths, tf.float32)
-            return tf.reduce_mean(cross_entropy), trans
+            per_example_loss = cross_entropy
+            loss = tf.reduce_mean(per_example_loss)
+            return loss, per_example_loss, trans
         
-    lstm_outputs = fused_lstm_layer()
-    logits = project_layer(lstm_outputs)
-    loss, trans = loss_layer(logits)
+    lstm_outputs = lstm_layer(embedding, lengths, is_training)
+    logits = project_layer(lstm_outputs, num_labels, seq_length)
+    loss, per_example_loss, trans = loss_layer(logits, labels, num_labels, lengths, input_mask)
     if FLAGS.use_crf:
         pred_ids, _ = crf.crf_decode(potentials=logits, transition_params=trans, sequence_length=lengths)
     else:
-        pred_ids = tf.argmax(logits, 2)
+        probabilities = tf.nn.softmax(logits, axis=-1)
+        pred_ids = tf.argmax(probabilities,axis=-1)
+
+    # masking for confirmation
+    pred_ids *= input_mask
 
     print('#' * 20)
     print('shape of output_layer:', embedding.shape)
-    print('hidden_size:%d' % hidden_size)
+    print('embedding_size:%d' % embedding_size)
     print('seq_length:%d' % seq_length)
     print('shape of logit', logits.shape)
     print('shape of loss', loss.shape)
+    print('shape of per_example_loss', per_example_loss.shape)
     print('num labels:%d' % num_labels)
     print('#' * 20)
-    return (loss, logits, trans, pred_ids)
+    return (loss, per_example_loss, logits, trans, pred_ids)
 
 def model_fn_builder(bert_config, num_labels, init_checkpoint, learning_rate,
                      num_train_steps, num_warmup_steps, use_tpu,
@@ -509,7 +504,7 @@ def model_fn_builder(bert_config, num_labels, init_checkpoint, learning_rate,
         # label_mask = features["label_mask"]
         is_training = (mode == tf.estimator.ModeKeys.TRAIN)
 
-        (total_loss, logits, trans, pred_ids) = create_model(
+        (total_loss, per_example_loss, logits, trans, pred_ids) = create_model(
             bert_config, is_training, input_ids, input_mask, segment_ids, label_ids,
             num_labels, use_one_hot_embeddings)
 
@@ -550,7 +545,9 @@ def model_fn_builder(bert_config, num_labels, init_checkpoint, learning_rate,
             if mode == tf.estimator.ModeKeys.TRAIN:
                 train_op = optimization.create_optimizer(
                     total_loss, learning_rate, num_train_steps, num_warmup_steps, use_tpu)
-                logging_hook = tf.train.LoggingTensorHook({"loss" : total_loss}, every_n_iter=10)
+                if FLAGS.use_feature_based:
+                    train_op = tf.train.AdamOptimizer(learning_rate).minimize(total_loss, global_step=tf.train.get_or_create_global_step())
+                logging_hook = tf.train.LoggingTensorHook({"batch_loss" : total_loss}, every_n_iter=10)
                 output_spec = tf.contrib.tpu.TPUEstimatorSpec(
                     mode=mode,
                     loss=total_loss,
@@ -558,11 +555,11 @@ def model_fn_builder(bert_config, num_labels, init_checkpoint, learning_rate,
                     training_hooks = [logging_hook],
                     scaffold_fn=scaffold_fn)
             else: # mode == tf.estimator.ModeKeys.EVAL:
-                def metric_fn(label_ids, pred_ids, logits, trans):
+                def metric_fn(label_ids, pred_ids, per_example_loss, input_mask):
+                    '''
                     weight = tf.sequence_mask(FLAGS.max_seq_length)
                     # ['<pad>'] + ["O", "B-PER", "I-PER", "B-ORG", "I-ORG", "B-LOC", "I-LOC", "B-MISC", "I-MISC", "X", "[CLS]", "[SEP]"]
-                    #indices = [2, 3, 4, 5, 6, 7, 8, 9]
-                    indices = None
+                    indices = [1, 2, 3, 4, 5, 6, 7, 8, 9]
                     precision = tf_metrics.precision(label_ids, pred_ids, num_labels, indices, weight)
                     recall = tf_metrics.recall(label_ids, pred_ids, num_labels, indices, weight)
                     f = tf_metrics.f1(label_ids, pred_ids, num_labels, indices, weight)
@@ -571,7 +568,18 @@ def model_fn_builder(bert_config, num_labels, init_checkpoint, learning_rate,
                         'eval_recall': recall,
                         'eval_f': f,
                     }
-                eval_metrics = (metric_fn, [label_ids, pred_ids, logits, trans])
+                    '''
+                    precision = tf.metrics.precision(label_ids, pred_ids, input_mask)
+                    recall = tf.metrics.recall(label_ids, pred_ids, input_mask)
+                    accuracy = tf.metrics.accuracy(label_ids, pred_ids, input_mask)
+                    loss = tf.metrics.mean(per_example_loss)
+                    return {
+                        'eval_precision': precision,
+                        'eval_recall': recall,
+                        'eval_accuracy': accuracy,
+                        'eval_loss': loss,
+                    }
+                eval_metrics = (metric_fn, [label_ids, pred_ids, per_example_loss, input_mask])
                 output_spec = tf.contrib.tpu.TPUEstimatorSpec(
                     mode=mode,
                     loss=total_loss,
@@ -707,8 +715,8 @@ def main(_):
             is_training=False,
             drop_remainder=eval_drop_remainder)
         # train and evaluate 
-        hook = tf.contrib.estimator.stop_if_no_increase_hook(
-            estimator, 'eval_f', 2000, min_steps=5000, run_every_secs=120)
+        hook = tf.contrib.estimator.stop_if_no_decrease_hook(
+            estimator, 'eval_accuracy', 1500, min_steps=8000, run_every_secs=120)
         train_spec = tf.estimator.TrainSpec(input_fn=train_input_fn, hooks=[hook])
         eval_spec = tf.estimator.EvalSpec(input_fn=eval_input_fn, throttle_secs=120)
         tp = tf.estimator.train_and_evaluate(estimator, train_spec, eval_spec)

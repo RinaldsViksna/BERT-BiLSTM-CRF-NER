@@ -7,6 +7,7 @@ class Ext:
         self.task = 'ext'
 
     def __proc_bucket(self, bucket):
+        '''
         # for '-DOCSTART-'
         if bucket[1] == '[SEP]':
             print('O')
@@ -15,6 +16,10 @@ class Ext:
         for line in bucket[2:]:
             if line == '[SEP]': break
             print(line)
+        '''
+        for line in bucket[1:]:
+            print(line)
+
         print('')
         return None
 

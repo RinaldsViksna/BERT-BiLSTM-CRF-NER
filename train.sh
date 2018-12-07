@@ -91,13 +91,14 @@ rm -rf ./output
 mkdir -p output/result_dir
 rm -rf data.conf
 
-lowercase='False'
-bert_model_dir=${CDIR}/cased_L-12_H-768_A-12
+lowercase='True'
+bert_model_dir=${CDIR}/uncased_L-12_H-768_A-12
 
 python bert_lstm_ner.py   \
         --task_name="NER"  \
         --do_train=True   \
-        --do_predict=False \
+        --use_feature_based=False \
+        --do_predict=True \
         --use_crf=True \
         --data_dir=${CDIR}/NERdata  \
         --vocab_file=${bert_model_dir}/vocab.txt  \
@@ -107,7 +108,9 @@ python bert_lstm_ner.py   \
         --max_seq_length=150   \
         --lstm_size=128 \
         --train_batch_size=32   \
+        --eval_batch_size=128   \
+        --predict_batch_size=128   \
         --learning_rate=2e-5   \
-        --num_train_epochs=30   \
+        --num_train_epochs=3   \
         --data_config_path=${CDIR}/data.conf \
         --output_dir=${CDIR}/output/result_dir/
