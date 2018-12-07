@@ -91,8 +91,8 @@ rm -rf ./output
 mkdir -p output/result_dir
 rm -rf data.conf
 
-lowercase='True'
-bert_model_dir=${CDIR}/uncased_L-12_H-768_A-12
+lowercase='False'
+bert_model_dir=${CDIR}/cased_L-12_H-768_A-12
 
 python bert_lstm_ner.py   \
         --task_name="NER"  \

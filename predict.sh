@@ -86,8 +86,8 @@ export -f readlink
 CDIR=$(readlink -f $(dirname $(readlink -f ${BASH_SOURCE[0]})))
 PDIR=$(readlink -f $(dirname $(readlink -f ${BASH_SOURCE[0]}))/..)
 
-lowercase='True'
-bert_model_dir=${CDIR}/uncased_L-12_H-768_A-12
+lowercase='False'
+bert_model_dir=${CDIR}/cased_L-12_H-768_A-12
 
 python bert_lstm_ner.py   \
         --task_name="NER"  \
