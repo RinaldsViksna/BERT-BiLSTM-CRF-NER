@@ -39,11 +39,8 @@ $ cat output/result_dir/predicted_results.txt
 
 $ more output/result_dir/label_test.txt
 
-[CLS]
-[SEP]
 
 SOCCER - JAPAN GET LUCKY WIN , CHINA IN SURPRISE DEFEAT .
-[CLS]
 O
 X
 X
