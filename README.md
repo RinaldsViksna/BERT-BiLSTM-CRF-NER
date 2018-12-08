@@ -54,7 +54,19 @@ X
 ...
 
 $ perl conlleval.pl < pred.txt
+processed 46435 tokens with 5648 phrases; found: 5689 phrases; correct: 5169.
+accuracy:  98.26%; precision:  90.86%; recall:  91.52%; FB1:  91.19
+              LOC: precision:  93.75%; recall:  92.57%; FB1:  93.15  1647
+             MISC: precision:  79.75%; recall:  83.05%; FB1:  81.37  731
+              ORG: precision:  88.29%; recall:  89.40%; FB1:  88.84  1682
+              PER: precision:  95.58%; recall:  96.29%; FB1:  95.93  1629
 
+processed 46435 tokens with 5648 phrases; found: 5715 phrases; correct: 5187.
+accuracy:  98.25%; precision:  90.76%; recall:  91.84%; FB1:  91.30
+              LOC: precision:  92.78%; recall:  93.17%; FB1:  92.97  1675
+             MISC: precision:  79.46%; recall:  83.19%; FB1:  81.28  735
+              ORG: precision:  88.33%; recall:  90.25%; FB1:  89.28  1697
+              PER: precision:  96.39%; recall:  95.86%; FB1:  96.12  1608
 ```
 
 ----

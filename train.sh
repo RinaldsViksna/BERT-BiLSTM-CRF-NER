@@ -111,6 +111,6 @@ python bert_lstm_ner.py   \
         --eval_batch_size=128   \
         --predict_batch_size=128   \
         --learning_rate=2e-5   \
-        --num_train_epochs=30   \
+        --num_train_epochs=70   \
         --data_config_path=${CDIR}/data.conf \
         --output_dir=${CDIR}/output/result_dir/
