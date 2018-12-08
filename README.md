@@ -29,6 +29,8 @@ bert_config.json  bert_model.ckpt.data-00000-of-00001  bert_model.ckpt.index  be
 $ ./train.sh -v -v
 $ tensorboard --logdir output/result_dir/ --port 6008
 ```
+![](/eval_f.png)
+![](/loss.png)
 
 ### predict
 ```
