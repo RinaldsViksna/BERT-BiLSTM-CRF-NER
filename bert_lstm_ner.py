@@ -556,26 +556,17 @@ def model_fn_builder(bert_config, num_labels, init_checkpoint, learning_rate,
                     scaffold_fn=scaffold_fn)
             else: # mode == tf.estimator.ModeKeys.EVAL:
                 def metric_fn(label_ids, pred_ids, per_example_loss, input_mask):
-                    '''
-                    weight = tf.sequence_mask(FLAGS.max_seq_length)
-                    # ['<pad>'] + ["O", "B-PER", "I-PER", "B-ORG", "I-ORG", "B-LOC", "I-LOC", "B-MISC", "I-MISC", "X", "[CLS]", "[SEP]"]
-                    indices = [1, 2, 3, 4, 5, 6, 7, 8, 9]
-                    precision = tf_metrics.precision(label_ids, pred_ids, num_labels, indices, weight)
-                    recall = tf_metrics.recall(label_ids, pred_ids, num_labels, indices, weight)
-                    f = tf_metrics.f1(label_ids, pred_ids, num_labels, indices, weight)
-                    return {
-                        'eval_precision': precision,
-                        'eval_recall': recall,
-                        'eval_f': f,
-                    }
-                    '''
-                    precision = tf.metrics.precision(label_ids, pred_ids, input_mask)
-                    recall = tf.metrics.recall(label_ids, pred_ids, input_mask)
+                    # ['<pad>'] + ["O", "B-PER", "I-PER", "B-ORG", "I-ORG", "B-LOC", "I-LOC", "B-MISC", "I-MISC", "X"]
+                    indices = [2, 3, 4, 5, 6, 7, 8, 9]
+                    precision = tf_metrics.precision(label_ids, pred_ids, num_labels, indices, input_mask)
+                    recall = tf_metrics.recall(label_ids, pred_ids, num_labels, indices, input_mask)
+                    f = tf_metrics.f1(label_ids, pred_ids, num_labels, indices, input_mask)
                     accuracy = tf.metrics.accuracy(label_ids, pred_ids, input_mask)
                     loss = tf.metrics.mean(per_example_loss)
                     return {
                         'eval_precision': precision,
                         'eval_recall': recall,
+                        'eval_f': f,
                         'eval_accuracy': accuracy,
                         'eval_loss': loss,
                     }
@@ -645,8 +636,7 @@ def main(_):
     if FLAGS.do_train:
         if len(data_config) == 0:
             train_examples = processor.get_train_examples(FLAGS.data_dir)
-            num_train_steps = int(
-                len(train_examples) / FLAGS.train_batch_size * FLAGS.num_train_epochs)
+            num_train_steps = int((len(train_examples) / FLAGS.train_batch_size) * FLAGS.num_train_epochs)
             num_warmup_steps = int(num_train_steps * FLAGS.warmup_proportion)
             data_config['num_train_steps'] = num_train_steps
             data_config['num_warmup_steps'] = num_warmup_steps
@@ -716,8 +706,8 @@ def main(_):
             drop_remainder=eval_drop_remainder)
         # train and evaluate 
         hook = tf.contrib.estimator.stop_if_no_decrease_hook(
-            estimator, 'eval_accuracy', 1500, min_steps=8000, run_every_secs=120)
-        train_spec = tf.estimator.TrainSpec(input_fn=train_input_fn, hooks=[hook])
+            estimator, 'eval_f', 1500, min_steps=8000, run_every_secs=120)
+        train_spec = tf.estimator.TrainSpec(input_fn=train_input_fn, max_steps=num_train_steps, hooks=[hook])
         eval_spec = tf.estimator.EvalSpec(input_fn=eval_input_fn, throttle_secs=120)
         tp = tf.estimator.train_and_evaluate(estimator, train_spec, eval_spec)
         result = tp[0]
