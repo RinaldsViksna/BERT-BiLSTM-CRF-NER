@@ -100,7 +100,7 @@ python bert_lstm_ner.py   \
         --do_lower_case=${lowercase} \
         --bert_config_file=${bert_model_dir}/bert_config.json \
         --max_seq_length=150   \
-        --lstm_size=128 \
+        --lstm_size=256 \
         --eval_batch_size=128   \
         --predict_batch_size=128   \
         --data_config_path=${CDIR}/data.conf \

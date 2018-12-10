@@ -106,10 +106,12 @@ python bert_lstm_ner.py   \
         --bert_config_file=${bert_model_dir}/bert_config.json \
         --init_checkpoint=${bert_model_dir}/bert_model.ckpt   \
         --max_seq_length=150   \
-        --lstm_size=128 \
+        --lstm_size=256 \
         --train_batch_size=32   \
         --eval_batch_size=128   \
         --predict_batch_size=128   \
+        --bert_dropout_rate=0.1 \
+        --bilstm_dropout_rate=0.3 \
         --learning_rate=2e-5   \
         --num_train_epochs=70   \
         --data_config_path=${CDIR}/data.conf \

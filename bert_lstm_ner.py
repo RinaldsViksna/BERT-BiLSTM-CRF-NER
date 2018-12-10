@@ -103,13 +103,19 @@ flags.DEFINE_float(
     "Proportion of training to perform linear learning rate warmup for. "
     "E.g., 0.1 = 10% of training.")
 
+flags.DEFINE_float("bert_dropout_rate", 0.2,
+                   "Proportion of dropout for bert embedding.")
+
+flags.DEFINE_float("bilstm_dropout_rate", 0.2,
+                   "Proportion of dropout for bilstm.")
+
 flags.DEFINE_integer("save_checkpoints_steps", 1000,
                      "How often to save the model checkpoint.")
 
 flags.DEFINE_integer("save_summary_steps", 100,
                      "Save summaries every this many steps")
 
-flags.DEFINE_integer("keep_checkpoint_max", 10,
+flags.DEFINE_integer("keep_checkpoint_max", 20,
                   "The maximum number of recent checkpoint files to keep")
 
 flags.DEFINE_integer("iterations_per_loop", 1000,
@@ -392,7 +398,7 @@ def create_model(bert_config, is_training, input_ids, input_mask,
     embedding = model.get_sequence_output() # (batch_size, seq_length, embedding_size)
     if is_training:
         # dropout embedding
-        embedding = tf.layers.dropout(embedding, rate=0.2, training=is_training)
+        embedding = tf.layers.dropout(embedding, rate=FLAGS.bert_dropout_rate, training=is_training)
     embedding_size = embedding.shape[-1].value # embedding_size
     seq_length = embedding.shape[1].value
 
@@ -421,7 +427,7 @@ def create_model(bert_config, is_training, input_ids, input_mask,
                                        lengths,
                                        rnn_size=FLAGS.lstm_size,
                                        is_training=is_training,
-                                       dropout_rate=0.2,
+                                       dropout_rate=FLAGS.bilstm_dropout_rate,
                                        scope=scope)  # (batch_size, seq_length, 2*rnn_size)
         return rnn_output
 
@@ -543,8 +549,15 @@ def model_fn_builder(bert_config, num_labels, init_checkpoint, learning_rate,
             )
         else:
             if mode == tf.estimator.ModeKeys.TRAIN:
+                '''
                 train_op = optimization.create_optimizer(
                     total_loss, learning_rate, num_train_steps, num_warmup_steps, use_tpu)
+                '''
+                global_step = tf.train.get_or_create_global_step()
+                lr = tf.train.exponential_decay(learning_rate, global_step, 5000, 0.7, staircase=True)
+                optimizer = tf.train.AdamOptimizer(lr)
+                grads, _ = tf.clip_by_global_norm(tf.gradients(total_loss, tvars), 10)
+                train_op = optimizer.apply_gradients(zip(grads, tvars), global_step=global_step)
                 if FLAGS.use_feature_based:
                     train_op = tf.train.AdamOptimizer(learning_rate).minimize(total_loss, global_step=tf.train.get_or_create_global_step())
                 logging_hook = tf.train.LoggingTensorHook({"batch_loss" : total_loss}, every_n_iter=10)
@@ -706,7 +719,7 @@ def main(_):
             drop_remainder=eval_drop_remainder)
         # train and evaluate 
         hook = tf.contrib.estimator.stop_if_no_decrease_hook(
-            estimator, 'eval_f', 2000, min_steps=35000, run_every_secs=120)
+            estimator, 'eval_f', 2000, min_steps=30000, run_every_secs=120)
         train_spec = tf.estimator.TrainSpec(input_fn=train_input_fn, max_steps=num_train_steps, hooks=[hook])
         eval_spec = tf.estimator.EvalSpec(input_fn=eval_input_fn, throttle_secs=120)
         tp = tf.estimator.train_and_evaluate(estimator, train_spec, eval_spec)
