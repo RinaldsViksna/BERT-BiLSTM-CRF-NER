@@ -54,24 +54,30 @@ X
 ...
 
 $ perl conlleval.pl < pred.txt
-processed 46435 tokens with 5648 phrases; found: 5689 phrases; correct: 5169.
-accuracy:  98.26%; precision:  90.86%; recall:  91.52%; FB1:  91.19
-              LOC: precision:  93.75%; recall:  92.57%; FB1:  93.15  1647
-             MISC: precision:  79.75%; recall:  83.05%; FB1:  81.37  731
-              ORG: precision:  88.29%; recall:  89.40%; FB1:  88.84  1682
-              PER: precision:  95.58%; recall:  96.29%; FB1:  95.93  1629
+processed 46435 tokens with 5648 phrases; found: 5637 phrases; correct: 5163.
+accuracy:  98.30%; precision:  91.59%; recall:  91.41%; FB1:  91.50
+              LOC: precision:  93.27%; recall:  92.27%; FB1:  92.77  1650
+             MISC: precision:  81.01%; recall:  82.62%; FB1:  81.81  716
+              ORG: precision:  89.85%; recall:  90.61%; FB1:  90.23  1675
+              PER: precision:  96.43%; recall:  95.18%; FB1:  95.80  1596
 
-processed 46435 tokens with 5648 phrases; found: 5715 phrases; correct: 5187.
-accuracy:  98.25%; precision:  90.76%; recall:  91.84%; FB1:  91.30
-              LOC: precision:  92.78%; recall:  93.17%; FB1:  92.97  1675
-             MISC: precision:  79.46%; recall:  83.19%; FB1:  81.28  735
-              ORG: precision:  88.33%; recall:  90.25%; FB1:  89.28  1697
-              PER: precision:  96.39%; recall:  95.86%; FB1:  96.12  1608
+processed 46435 tokens with 5648 phrases; found: 5675 phrases; correct: 5183.
+accuracy:  98.32%; precision:  91.33%; recall:  91.77%; FB1:  91.55
+              LOC: precision:  92.95%; recall:  92.45%; FB1:  92.70  1659
+             MISC: precision:  82.50%; recall:  82.62%; FB1:  82.56  703
+              ORG: precision:  88.37%; recall:  91.45%; FB1:  89.88  1719
+              PER: precision:  96.74%; recall:  95.36%; FB1:  96.04  1594
+
 ```
 
 ### dev note
 ```
-- ELMo
+1. dev.txt
+- BERT
+INFO:tensorflow:Saving dict for global step 30000: eval_accuracy = 0.9934853, eval_f = 0.9627948, eval_loss = 1.6617825, eval_precision = 0.9645357, eval_recall = 0.9610601, global_step = 30000, loss = 1.6632456
+INFO:tensorflow:Saving 'checkpoint_path' summary for global step 30000: /data1/index.shin/BERT-BiLSTM-CRF-NER/output/result_dir/model.ckpt-30000
+
+- ELMo(for reference)
 [epoch 33/70] dev precision, recall, f1(token):
 precision, recall, fscore
 [0.9978130380159136, 0.9583333333333334, 0.9263271939328277, 0.9706510138740662, 0.9892224788298691, 0.9701897018970189, 0.9464285714285714, 0.8797653958944281, 0.9323308270676691, 0.959865053513262]
@@ -80,10 +86,11 @@ precision, recall, fscore
 new best f1 score! : 0.9594743880458168
 max model saved in file: ./checkpoint/model_max.ckpt
 
+
+2. test.txt
 - BERT
-[epoch 41/70]
-INFO:tensorflow:Saving dict for global step 21000: eval_accuracy = 0.9930421, eval_f = 0.9581444, eval_loss = 1.6283314, eval_precision = 0.9583672, eval_recall = 0.9579217, global_step = 21000, loss = 1.5747236
-INFO:tensorflow:Saving 'checkpoint_path' summary for global step 21000: /data1/index.shin/BERT-BiLSTM-CRF-NER/output/result_dir/model.ckpt-21000
+INFO:tensorflow:Saving dict for global step 30000: eval_accuracy = 0.9861725, eval_f = 0.92653006, eval_loss = 3.263393, eval_precision = 0.9218941, eval_recall = 0.931213, global_step = 30000, loss = 3.263018
+
 ```
 
 ----

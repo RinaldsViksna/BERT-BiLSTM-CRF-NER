@@ -111,8 +111,8 @@ python bert_lstm_ner.py   \
         --eval_batch_size=128   \
         --predict_batch_size=128   \
         --bert_dropout_rate=0.1 \
-        --bilstm_dropout_rate=0.3 \
+        --bilstm_dropout_rate=0.1 \
         --learning_rate=2e-5   \
-        --num_train_epochs=70   \
+        --num_train_epochs=100   \
         --data_config_path=${CDIR}/data.conf \
         --output_dir=${CDIR}/output/result_dir/

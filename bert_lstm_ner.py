@@ -138,18 +138,20 @@ flags.DEFINE_integer('lstm_size', 128, 'size of lstm units')
 class InputExample(object):
     """A single training/test example for simple sequence classification."""
 
-    def __init__(self, guid, text, label=None):
+    def __init__(self, guid, text, pos=None, label=None):
         """Constructs a InputExample.
 
         Args:
           guid: Unique id for the example.
-          text_a: string. The untokenized text of the first sequence. For single
+          text: string. The untokenized text of the first sequence. For single
             sequence tasks, only this sequence must be specified.
+          pos: string. The pos(part of speech) tag of the example.
           label: (Optional) string. The label of the example. This should be
             specified for train and dev examples, but not for test examples.
         """
-        self.guid = guid
-        self.text = text
+        self.guid  = guid
+        self.text  = text
+        self.pos   = pos
         self.label = label
 
 
@@ -183,24 +185,33 @@ class DataProcessor(object):
     def _read_data(cls, input_file):
         """Reads a BIO data."""
         with codecs.open(input_file, 'r', encoding='utf-8') as f:
-            lines = []
-            words = []
+            lines  = []
+            words  = []
+            poss   = []
             labels = []
             for line in f:
-                contends = line.strip()
-                word = line.strip().split(' ')[0]
-                label = line.strip().split(' ')[-1]
-                if contends.startswith("-DOCSTART-"):
-                    words.append('')
+                contents = line.strip()
+                if contents.startswith("-DOCSTART-"):
                     continue
-                if len(contends) == 0:
-                    l = ' '.join([label for label in labels if len(label) > 0])
-                    w = ' '.join([word for word in words if len(word) > 0])
-                    lines.append([l, w])
-                    words = []
+                if len(contents) == 0: # newline
+                    if len(words) == 0: continue
+                    assert(len(words) == len(poss))
+                    assert(len(poss) == len(labels))
+                    w = ' '.join(words)
+                    p = ' '.join(poss)
+                    l = ' '.join(labels)
+                    lines.append([w, p, l])
+                    words  = []
+                    poss   = []
                     labels = []
                     continue
+                tokens = line.strip().split(' ')
+                assert(len(tokens) == 4)
+                word = tokens[0]
+                pos  = tokens[1]
+                label = tokens[-1]
                 words.append(word)
+                poss.append(pos)
                 labels.append(label)
             return lines
 
@@ -228,11 +239,12 @@ class NerProcessor(DataProcessor):
 
     def _create_example(self, lines, set_type):
         examples = []
-        for (i, line) in enumerate(lines):
+        for (i, line) in enumerate(lines): # line = (w, p, l)
             guid = "%s-%s" % (set_type, i)
-            text = tokenization.convert_to_unicode(line[1])
-            label = tokenization.convert_to_unicode(line[0])
-            examples.append(InputExample(guid=guid, text=text, label=label))
+            text = tokenization.convert_to_unicode(line[0])
+            pos  = tokenization.convert_to_unicode(line[1])
+            label = tokenization.convert_to_unicode(line[2])
+            examples.append(InputExample(guid=guid, text=text, pos=pos, label=label))
         return examples
 
 
@@ -248,10 +260,11 @@ def write_tokens(tokens, mode):
 
 def convert_single_example(ex_index, example, label_list, max_seq_length, tokenizer, mode):
     label_map = {}
-    for (i, label) in enumerate(label_list, 1):
+    for (i, label) in enumerate(label_list, 1): # 0 index for '0' padding
         label_map[label] = i
     with codecs.open('./output/label2id.pkl', 'wb') as w:
         pickle.dump(label_map, w)
+    # TODO add pos
     textlist = example.text.split(' ')
     labellist = example.label.split(' ')
     tokens = []
@@ -516,7 +529,8 @@ def model_fn_builder(bert_config, num_labels, init_checkpoint, learning_rate,
 
         print('shape of pred_ids', pred_ids.shape)
 
-        # add loss summary
+        global_step = tf.train.get_or_create_global_step()
+        # add summary
         tf.summary.scalar('loss', total_loss)
 
         tvars = tf.trainable_variables()
@@ -553,13 +567,12 @@ def model_fn_builder(bert_config, num_labels, init_checkpoint, learning_rate,
                 train_op = optimization.create_optimizer(
                     total_loss, learning_rate, num_train_steps, num_warmup_steps, use_tpu)
                 '''
-                global_step = tf.train.get_or_create_global_step()
-                lr = tf.train.exponential_decay(learning_rate, global_step, 5000, 0.7, staircase=True)
+                lr = tf.train.exponential_decay(learning_rate, global_step, 5000, 0.9, staircase=True)
                 optimizer = tf.train.AdamOptimizer(lr)
-                grads, _ = tf.clip_by_global_norm(tf.gradients(total_loss, tvars), 10)
+                grads, _ = tf.clip_by_global_norm(tf.gradients(total_loss, tvars), 1.5)
                 train_op = optimizer.apply_gradients(zip(grads, tvars), global_step=global_step)
                 if FLAGS.use_feature_based:
-                    train_op = tf.train.AdamOptimizer(learning_rate).minimize(total_loss, global_step=tf.train.get_or_create_global_step())
+                    train_op = tf.train.AdamOptimizer(learning_rate).minimize(total_loss, global_step=global_step)
                 logging_hook = tf.train.LoggingTensorHook({"batch_loss" : total_loss}, every_n_iter=10)
                 output_spec = tf.contrib.tpu.TPUEstimatorSpec(
                     mode=mode,
@@ -719,7 +732,7 @@ def main(_):
             drop_remainder=eval_drop_remainder)
         # train and evaluate 
         hook = tf.contrib.estimator.stop_if_no_decrease_hook(
-            estimator, 'eval_f', 2000, min_steps=30000, run_every_secs=120)
+            estimator, 'eval_f', 3000, min_steps=60000, run_every_secs=120)
         train_spec = tf.estimator.TrainSpec(input_fn=train_input_fn, max_steps=num_train_steps, hooks=[hook])
         eval_spec = tf.estimator.EvalSpec(input_fn=eval_input_fn, throttle_secs=120)
         tp = tf.estimator.train_and_evaluate(estimator, train_spec, eval_spec)
@@ -785,8 +798,8 @@ def main(_):
         print('type of result:%s, type of predict_examples:%s' % (type(result), type(predict_examples)))
         print('*' * 20)
         with codecs.open(output_predict_file, 'w', encoding='utf-8') as writer:
-            for predict_line, prediction in zip(predict_examples, result):
-                writer.write(predict_line.text + '\n')
+            for predict_example, prediction in zip(predict_examples, result):
+                writer.write(predict_example.text + '\n')
                 output_line = "\n".join(id2label[id] for id in prediction if id != 0) + "\n"
                 writer.write(output_line + '\n')
 
@@ -805,4 +818,5 @@ if __name__ == "__main__":
     flags.mark_flag_as_required("bert_config_file")
     flags.mark_flag_as_required("output_dir")
     tf.app.run()
+
 
