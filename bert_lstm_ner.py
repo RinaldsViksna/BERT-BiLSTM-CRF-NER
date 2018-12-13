@@ -481,9 +481,20 @@ def create_model(bert_config, is_training, input_ids, input_mask,
             per_example_loss = cross_entropy
             loss = tf.reduce_mean(per_example_loss)
             return loss, per_example_loss, trans
-        
+    '''    
+    # 1
+    logits = project_layer(embedding, num_labels, seq_length, scope='project')
+    '''
+    '''
+    # 2
     lstm_outputs = lstm_layer(embedding, lengths, is_training)
-    logits = project_layer(lstm_outputs, num_labels, seq_length)
+    p1 = project_layer(lstm_outputs, FLAGS.lstm_size, seq_length, scope='project-1')
+    p2 = project_layer(p1, num_labels, seq_length, scope='project-2')
+    logits = p2
+    '''
+    # 3
+    lstm_outputs = lstm_layer(embedding, lengths, is_training)
+    logits = project_layer(lstm_outputs, num_labels, seq_length, scope='project')
     loss, per_example_loss, trans = loss_layer(logits, labels, num_labels, lengths, input_mask)
     if FLAGS.use_crf:
         pred_ids, _ = crf.crf_decode(potentials=logits, transition_params=trans, sequence_length=lengths)
@@ -732,7 +743,7 @@ def main(_):
             drop_remainder=eval_drop_remainder)
         # train and evaluate 
         hook = tf.contrib.estimator.stop_if_no_decrease_hook(
-            estimator, 'eval_f', 3000, min_steps=60000, run_every_secs=120)
+            estimator, 'eval_f', 3000, min_steps=30000, run_every_secs=120)
         train_spec = tf.estimator.TrainSpec(input_fn=train_input_fn, max_steps=num_train_steps, hooks=[hook])
         eval_spec = tf.estimator.EvalSpec(input_fn=eval_input_fn, throttle_secs=120)
         tp = tf.estimator.train_and_evaluate(estimator, train_spec, eval_spec)
