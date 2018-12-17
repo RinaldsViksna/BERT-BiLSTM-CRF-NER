@@ -92,7 +92,8 @@ mkdir -p output/result_dir
 rm -rf data.conf
 
 lowercase='False'
-bert_model_dir=${CDIR}/cased_L-12_H-768_A-12
+#bert_model_dir=${CDIR}/cased_L-12_H-768_A-12
+bert_model_dir=${CDIR}/cased_L-24_H-1024_A-16
 
 python bert_lstm_ner.py   \
         --task_name="NER"  \
@@ -107,11 +108,11 @@ python bert_lstm_ner.py   \
         --init_checkpoint=${bert_model_dir}/bert_model.ckpt   \
         --max_seq_length=150   \
         --lstm_size=256 \
-        --train_batch_size=32   \
-        --eval_batch_size=128   \
-        --predict_batch_size=128   \
-        --bert_dropout_rate=0.1 \
-        --bilstm_dropout_rate=0.1 \
+        --train_batch_size=16   \
+        --eval_batch_size=32   \
+        --predict_batch_size=32   \
+        --bert_dropout_rate=0.2 \
+        --bilstm_dropout_rate=0.2 \
         --learning_rate=2e-5   \
         --num_train_epochs=100   \
         --data_config_path=${CDIR}/data.conf \

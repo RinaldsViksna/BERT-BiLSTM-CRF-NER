@@ -87,7 +87,8 @@ CDIR=$(readlink -f $(dirname $(readlink -f ${BASH_SOURCE[0]})))
 PDIR=$(readlink -f $(dirname $(readlink -f ${BASH_SOURCE[0]}))/..)
 
 lowercase='False'
-bert_model_dir=${CDIR}/cased_L-12_H-768_A-12
+#bert_model_dir=${CDIR}/cased_L-12_H-768_A-12
+bert_model_dir=${CDIR}/cased_L-24_H-1024_A-16
 
 python bert_lstm_ner.py   \
         --task_name="NER"  \
@@ -101,8 +102,8 @@ python bert_lstm_ner.py   \
         --bert_config_file=${bert_model_dir}/bert_config.json \
         --max_seq_length=150   \
         --lstm_size=256 \
-        --eval_batch_size=128   \
-        --predict_batch_size=128   \
+        --eval_batch_size=32   \
+        --predict_batch_size=32   \
         --data_config_path=${CDIR}/data.conf \
         --output_dir=${CDIR}/output/result_dir/
 

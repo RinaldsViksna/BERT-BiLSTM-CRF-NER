@@ -54,13 +54,13 @@ X
 ...
 
 $ perl conlleval.pl < pred.txt
+* base
 processed 46435 tokens with 5648 phrases; found: 5637 phrases; correct: 5163.
 accuracy:  98.30%; precision:  91.59%; recall:  91.41%; FB1:  91.50
               LOC: precision:  93.27%; recall:  92.27%; FB1:  92.77  1650
              MISC: precision:  81.01%; recall:  82.62%; FB1:  81.81  716
               ORG: precision:  89.85%; recall:  90.61%; FB1:  90.23  1675
               PER: precision:  96.43%; recall:  95.18%; FB1:  95.80  1596
-
 processed 46435 tokens with 5648 phrases; found: 5675 phrases; correct: 5183.
 accuracy:  98.32%; precision:  91.33%; recall:  91.77%; FB1:  91.55
               LOC: precision:  92.95%; recall:  92.45%; FB1:  92.70  1659
@@ -68,14 +68,26 @@ accuracy:  98.32%; precision:  91.33%; recall:  91.77%; FB1:  91.55
               ORG: precision:  88.37%; recall:  91.45%; FB1:  89.88  1719
               PER: precision:  96.74%; recall:  95.36%; FB1:  96.04  1594
 
+* large
+processed 46435 tokens with 5648 phrases; found: 5663 phrases; correct: 5212.
+accuracy:  98.47%; precision:  92.04%; recall:  92.28%; FB1:  92.16
+              LOC: precision:  93.18%; recall:  93.35%; FB1:  93.26  1671
+             MISC: precision:  83.53%; recall:  82.34%; FB1:  82.93  692
+              ORG: precision:  90.57%; recall:  91.39%; FB1:  90.98  1676
+              PER: precision:  96.00%; recall:  96.41%; FB1:  96.20  1624
 ```
 
 ### dev note
 ```
 1. dev.txt
 - BERT
+* base
 INFO:tensorflow:Saving dict for global step 30000: eval_accuracy = 0.9934853, eval_f = 0.9627948, eval_loss = 1.6617825, eval_precision = 0.9645357, eval_recall = 0.9610601, global_step = 30000, loss = 1.6632456
 INFO:tensorflow:Saving 'checkpoint_path' summary for global step 30000: /data1/index.shin/BERT-BiLSTM-CRF-NER/output/result_dir/model.ckpt-30000
+
+* large
+INFO:tensorflow:Saving dict for global step 31000: eval_accuracy = 0.9936458, eval_f = 0.96526873, eval_loss = 1.6502532, eval_precision = 0.9670967, eval_recall = 0.9634477, global_step = 31000, loss = 1.6502532
+INFO:tensorflow:Saving 'checkpoint_path' summary for global step 31000: /root/BERT-BiLSTM-CRF-NER/output/result_dir/model.ckpt-31000
 
 - ELMo(for reference)
 [epoch 33/70] dev precision, recall, f1(token):
@@ -89,7 +101,11 @@ max model saved in file: ./checkpoint/model_max.ckpt
 
 2. test.txt
 - BERT
+* base
 INFO:tensorflow:Saving dict for global step 30000: eval_accuracy = 0.9861725, eval_f = 0.92653006, eval_loss = 3.263393, eval_precision = 0.9218941, eval_recall = 0.931213, global_step = 30000, loss = 3.263018
+
+* large
+INFO:tensorflow:Saving dict for global step 31000: eval_accuracy = 0.98725253, eval_f = 0.9329729, eval_loss = 3.080433, eval_precision = 0.9299449, eval_recall = 0.93602073, global_step = 31000, loss = 3.0799496
 
 ```
 
