@@ -62,7 +62,6 @@ if __name__ == '__main__':
             sys.exit(1)
 
         entry = []
-        a_word_list = []
         for a_line, b_line in zip(a_data[idx], b_data[idx]):
             a_tokens = a_line.split()
             assert(len(a_tokens) == 4)
