@@ -75,6 +75,14 @@ accuracy:  98.47%; precision:  92.04%; recall:  92.28%; FB1:  92.16
              MISC: precision:  83.53%; recall:  82.34%; FB1:  82.93  692
               ORG: precision:  90.57%; recall:  91.39%; FB1:  90.98  1676
               PER: precision:  96.00%; recall:  96.41%; FB1:  96.20  1624
+
+* large, feature-based
+processed 46435 tokens with 5648 phrases; found: 5680 phrases; correct: 5195.
+accuracy:  98.33%; precision:  91.46%; recall:  91.98%; FB1:  91.72
+              LOC: precision:  92.55%; recall:  93.05%; FB1:  92.80  1677
+             MISC: precision:  83.16%; recall:  81.62%; FB1:  82.39  689
+              ORG: precision:  89.54%; recall:  91.75%; FB1:  90.63  1702
+              PER: precision:  95.91%; recall:  95.61%; FB1:  95.76  1612
 ```
 
 ### dev note

@@ -582,8 +582,6 @@ def model_fn_builder(bert_config, num_labels, init_checkpoint, learning_rate,
                 optimizer = tf.train.AdamOptimizer(lr)
                 grads, _ = tf.clip_by_global_norm(tf.gradients(total_loss, tvars), 1.5)
                 train_op = optimizer.apply_gradients(zip(grads, tvars), global_step=global_step)
-                if FLAGS.use_feature_based:
-                    train_op = tf.train.AdamOptimizer(learning_rate).minimize(total_loss, global_step=global_step)
                 logging_hook = tf.train.LoggingTensorHook({"batch_loss" : total_loss}, every_n_iter=10)
                 output_spec = tf.contrib.tpu.TPUEstimatorSpec(
                     mode=mode,
