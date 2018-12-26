@@ -154,6 +154,11 @@ class InputExample(object):
         self.pos   = pos
         self.label = label
 
+        # will be saved after tokenizing
+        self.tokenized_tokens = []
+        self.tokenized_poss   = []
+        self.tokenized_labels = []
+
 
 class InputFeatures(object):
     """A single set of features of data."""
@@ -264,24 +269,35 @@ def convert_single_example(ex_index, example, label_list, max_seq_length, tokeni
         label_map[label] = i
     with codecs.open('./output/label2id.pkl', 'wb') as w:
         pickle.dump(label_map, w)
-    # TODO add pos
-    textlist = example.text.split(' ')
+    textlist  = example.text.split(' ')
+    poslist   = example.pos.split(' ') 
     labellist = example.label.split(' ')
     tokens = []
+    poss   = []
     labels = []
     for i, word in enumerate(textlist):
         token = tokenizer.tokenize(word)
         tokens.extend(token)
+        pos_1   = poslist[i]
         label_1 = labellist[i]
         for m in range(len(token)):
             if m == 0:
+                poss.append(pos_1)
                 labels.append(label_1)
             else:
+                poss.append("X")
                 labels.append("X")
     # tokens = tokenizer.tokenize(example.text)
     if len(tokens) >= max_seq_length - 1:
         tokens = tokens[0:(max_seq_length - 2)]
+        poss   = poss[0:(max_seq_length - 2)]
         labels = labels[0:(max_seq_length - 2)]
+
+    # save tokens, poss, labels back to example
+    example.tokenized_tokens = tokens
+    example.tokenized_poss   = poss
+    example.tokenized_labels = labels
+
     ntokens = []
     segment_ids = []
     label_ids = []
