@@ -138,7 +138,7 @@ flags.DEFINE_integer('lstm_size', 128, 'size of lstm units')
 class InputExample(object):
     """A single training/test example for simple sequence classification."""
 
-    def __init__(self, guid, text, pos=None, label=None):
+    def __init__(self, guid, text, pos, chunk, label=None):
         """Constructs a InputExample.
 
         Args:
@@ -146,17 +146,27 @@ class InputExample(object):
           text: string. The untokenized text of the first sequence. For single
             sequence tasks, only this sequence must be specified.
           pos: string. The pos(part of speech) tag of the example.
+          chunk: string. The chunk tag of the example.
           label: (Optional) string. The label of the example. This should be
             specified for train and dev examples, but not for test examples.
         """
         self.guid  = guid
         self.text  = text
         self.pos   = pos
+        self.chunk = chunk
         self.label = label
 
-        # will be saved after tokenizing
+        # untokenized data
+        self.tokens = text.split()
+        self.poss   = pos.split()
+        self.chunks = chunk.split()
+        self.labels = []
+        if label: self.labels = label.split()
+
+        # tokenized data
         self.tokenized_tokens = []
         self.tokenized_poss   = []
+        self.tokenized_chunks = []
         self.tokenized_labels = []
 
 
@@ -199,12 +209,13 @@ class NerProcessor(object):
 
     def _create_example(self, lines, set_type):
         examples = []
-        for (i, line) in enumerate(lines): # line = (w, p, l)
-            guid = "%s-%s" % (set_type, i)
-            text = tokenization.convert_to_unicode(line[0])
-            pos  = tokenization.convert_to_unicode(line[1])
-            label = tokenization.convert_to_unicode(line[2])
-            examples.append(InputExample(guid=guid, text=text, pos=pos, label=label))
+        for (i, line) in enumerate(lines): # line = (w, p, c, l)
+            guid  = "%s-%s" % (set_type, i)
+            text  = tokenization.convert_to_unicode(line[0])
+            pos   = tokenization.convert_to_unicode(line[1])
+            chunk = tokenization.convert_to_unicode(line[2])
+            label = tokenization.convert_to_unicode(line[3])
+            examples.append(InputExample(guid=guid, text=text, pos=pos, chunk=chunk, label=label))
         return examples
 
     @classmethod
@@ -214,6 +225,7 @@ class NerProcessor(object):
             lines  = []
             words  = []
             poss   = []
+            chunks = []
             labels = []
             for line in f:
                 contents = line.strip()
@@ -222,54 +234,66 @@ class NerProcessor(object):
                 if len(contents) == 0: # newline
                     if len(words) == 0: continue
                     assert(len(words) == len(poss))
-                    assert(len(poss) == len(labels))
+                    assert(len(poss) == len(chunks))
+                    assert(len(chunks) == len(labels))
                     w = ' '.join(words)
                     p = ' '.join(poss)
+                    c = ' '.join(chunks)
                     l = ' '.join(labels)
-                    lines.append([w, p, l])
+                    lines.append([w, p, c, l])
                     words  = []
                     poss   = []
+                    chunks = []
                     labels = []
                     continue
                 tokens = line.strip().split(' ')
                 assert(len(tokens) == 4)
-                word = tokens[0]
-                pos  = tokens[1]
+                word  = tokens[0]
+                pos   = tokens[1]
+                chunk = tokens[2]
                 label = tokens[-1]
                 words.append(word)
                 poss.append(pos)
+                chunks.append(chunk)
                 labels.append(label)
             return lines
 
 
 def convert_single_example_to_feature(ex_index, example, label_map, max_seq_length, tokenizer, mode):
-    textlist  = example.text.split(' ')
-    poslist   = example.pos.split(' ') 
-    labellist = example.label.split(' ')
+    textlist  = example.tokens
+    poslist   = example.poss
+    chunklist = example.chunks
+    labellist = example.labels
     tokens = []
     poss   = []
+    chunks = []
     labels = []
     for i, word in enumerate(textlist):
         token = tokenizer.tokenize(word)
         tokens.extend(token)
         pos_1   = poslist[i]
+        chunk_1 = chunklist[i]
         label_1 = labellist[i]
         for m in range(len(token)):
             if m == 0:
                 poss.append(pos_1)
+                chunks.append(chunk_1)
                 labels.append(label_1)
             else:
                 poss.append("X")
+                chunks.append("X")
                 labels.append("X")
     # tokens = tokenizer.tokenize(example.text)
     if len(tokens) >= max_seq_length - 1:
         tokens = tokens[0:(max_seq_length - 2)]
         poss   = poss[0:(max_seq_length - 2)]
+        chunks = chunks[0:(max_seq_length - 2)]
         labels = labels[0:(max_seq_length - 2)]
 
-    # save tokens, poss, labels back to example
+    # save tokens, poss, chunks, labels back to example
     example.tokenized_tokens = tokens
     example.tokenized_poss   = poss
+    example.tokenized_chunks = chunks
     example.tokenized_labels = labels
 
     ntokens = []
@@ -277,7 +301,6 @@ def convert_single_example_to_feature(ex_index, example, label_map, max_seq_leng
     label_ids = []
     ntokens.append("[CLS]")
     segment_ids.append(0)
-    # append("O") or append("[CLS]") not sure!
     #label_ids.append(label_map["[CLS]"])
     label_ids.append(0)
     for i, token in enumerate(tokens):
@@ -286,7 +309,6 @@ def convert_single_example_to_feature(ex_index, example, label_map, max_seq_leng
         label_ids.append(label_map[labels[i]])
     ntokens.append("[SEP]")
     segment_ids.append(0)
-    # append("O") or append("[SEP]") not sure!
     #label_ids.append(label_map["[SEP]"])
     label_ids.append(0)
     input_ids = tokenizer.convert_tokens_to_ids(ntokens)
@@ -787,7 +809,7 @@ def main(_):
                 writer.write("%s = %s\n" % (key, str(predicted_result[key])))
 
         result = estimator.predict(input_fn=predict_input_fn)
-        output_predict_file = os.path.join(FLAGS.output_dir, "label_test.txt")
+        output_predict_file = os.path.join(FLAGS.output_dir, "pred.txt")
 
         print('*' * 20)
         print('type of result:%s, type of predict_examples:%s' % (type(result), type(predict_examples)))
@@ -797,9 +819,30 @@ def main(_):
             id2label = {value: key for key, value in label2id.items()}
         with codecs.open(output_predict_file, 'w', encoding='utf-8') as writer:
             for predict_example, prediction in zip(predict_examples, result):
-                writer.write(predict_example.text + '\n')
-                output_line = "\n".join(id2label[id] for id in prediction if id != 0) + "\n"
-                writer.write(output_line + '\n')
+                tokens = predict_example.tokens
+                poss   = predict_example.poss
+                chunks = predict_example.chunks
+                labels = predict_example.labels
+                tokenized_tokens = predict_example.tokenized_tokens
+                tokenized_poss   = predict_example.tokenized_poss
+                tokenized_chunks = predict_example.tokenized_chunks
+                tokenized_labels = predict_example.tokenized_labels
+                text = predict_example.text
+                length = len(tokenized_tokens)
+                seq = 0
+                for token, pos, label, p_id in zip(tokenized_tokens, tokenized_poss, tokenized_labels, prediction[1:length+1]):
+                    p_label = 'O'
+                    if p_id != 0: p_label = id2label[p_id]
+                    if p_label == 'X': p_label = 'O'
+                    if label == 'X': continue
+                    org_token = tokens[seq]
+                    org_pos   = poss[seq]
+                    org_chunk = chunks[seq]
+                    org_label = labels[seq]
+                    output_line = ' '.join([org_token, org_pos, org_chunk, org_label, p_label])
+                    writer.write(output_line + '\n')
+                    seq += 1
+                writer.write('\n')
 
 
 def data_load():

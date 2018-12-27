@@ -107,7 +107,4 @@ python bert_lstm_ner.py   \
         --data_config_path=${CDIR}/data.conf \
         --output_dir=${CDIR}/output/result_dir/
 
-python ext.py < ${CDIR}/output/result_dir/label_test.txt > label.txt
-python tok.py --vocab_file ${bert_model_dir}/vocab.txt --do_lower_case ${lowercase} < ${CDIR}/NERdata/test.txt > test.txt.tok
-python merge.py --a_path test.txt.tok --b_path label.txt > pred.txt
-perl conlleval.pl < pred.txt
+perl conlleval.pl < ${CDIR}/output/result_dir/pred.txt

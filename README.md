@@ -39,21 +39,20 @@ $ ./predict.sh -v -v
 
 $ cat output/result_dir/predicted_results.txt
 
-$ more output/result_dir/label_test.txt
+$ more output/result_dir/pred.txt
+...
+Nadim NNP B-NP B-PER B-PER
+Ladki NNP I-NP I-PER I-PER
 
-
-SOCCER - JAPAN GET LUCKY WIN , CHINA IN SURPRISE DEFEAT .
-O
-X
-X
-X
-O
-B-PER
-X
-X
+AL-AIN NNP B-NP B-LOC B-LOC
+, , O O O
+United NNP B-NP B-LOC B-LOC
+Arab NNP I-NP I-LOC I-LOC
+Emirates NNPS I-NP I-LOC I-LOC
+1996-12-06 CD I-NP O O
 ...
 
-$ perl conlleval.pl < pred.txt
+$ perl conlleval.pl < output/result_dir/pred.txt
 * base
 processed 46435 tokens with 5648 phrases; found: 5637 phrases; correct: 5163.
 accuracy:  98.30%; precision:  91.59%; recall:  91.41%; FB1:  91.50
