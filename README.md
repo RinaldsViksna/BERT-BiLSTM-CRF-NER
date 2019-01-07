@@ -29,8 +29,8 @@ bert_config.json  bert_model.ckpt.data-00000-of-00001  bert_model.ckpt.index  be
 $ ./train.sh -v -v
 $ tensorboard --logdir output/result_dir/ --port 6008
 ```
-![](/eval_f.png)
-![](/loss.png)
+![](/images/eval_f.png)
+![](/images/loss.png)
 
 ### predict
 ```
@@ -175,10 +175,10 @@ else:
 ## result:
 all params using default
 #### In dev data set:
-![](/picture1.png)
+![](/images/picture1.png)
 
 #### In test data set
-![](/picture2.png)
+![](/images/picture2.png)
 
 ## reference: 
 + The evaluation codes come from:https://github.com/guillaumegenthial/tf_metrics/blob/master/tf_metrics/__init__.py
