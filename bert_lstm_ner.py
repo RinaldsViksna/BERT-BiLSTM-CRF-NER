@@ -424,7 +424,11 @@ def create_model(bert_config, is_training, input_ids, input_mask,
         use_one_hot_embeddings=use_one_hot_embeddings
     )
     embedding = model.get_sequence_output() # (batch_size, seq_length, embedding_size)
-    #embedding = model.get_all_encoder_layers()[-2]
+    '''
+    embedding_1 = model.get_all_encoder_layers()[-2]
+    embedding_2 = model.get_all_encoder_layers()[-1]
+    embedding = tf.concat([embedding_1, embedding_2], axis=-1)
+    '''
     if is_training:
         # dropout embedding
         embedding = tf.layers.dropout(embedding, rate=FLAGS.bert_dropout_rate, training=is_training)
