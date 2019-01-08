@@ -142,7 +142,6 @@ accuracy:  97.45%; precision:  87.93%; recall:  88.26%; FB1:  88.10
               ORG: precision:  85.42%; recall:  83.56%; FB1:  84.48  1625
               PER: precision:  93.24%; recall:  94.68%; FB1:  93.96  1642
 
-
 ```
 
 ----

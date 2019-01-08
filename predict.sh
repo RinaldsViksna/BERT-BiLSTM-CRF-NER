@@ -89,6 +89,8 @@ PDIR=$(readlink -f $(dirname $(readlink -f ${BASH_SOURCE[0]}))/..)
 lowercase='False'
 #bert_model_dir=${CDIR}/cased_L-12_H-768_A-12
 bert_model_dir=${CDIR}/cased_L-24_H-1024_A-16
+#lowercase='True'
+#bert_model_dir=${CDIR}/engwiki.1m-step.uncased_L-12_H-768_A-12
 
 python bert_lstm_ner.py   \
         --task_name="NER"  \
