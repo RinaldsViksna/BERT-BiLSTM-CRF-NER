@@ -53,7 +53,7 @@ Emirates NNPS I-NP I-LOC I-LOC
 ...
 
 $ perl conlleval.pl < output/result_dir/pred.txt
-* base
+* base, cased
 processed 46435 tokens with 5648 phrases; found: 5637 phrases; correct: 5163.
 accuracy:  98.30%; precision:  91.59%; recall:  91.41%; FB1:  91.50
               LOC: precision:  93.27%; recall:  92.27%; FB1:  92.77  1650
@@ -67,7 +67,7 @@ accuracy:  98.32%; precision:  91.33%; recall:  91.77%; FB1:  91.55
               ORG: precision:  88.37%; recall:  91.45%; FB1:  89.88  1719
               PER: precision:  96.74%; recall:  95.36%; FB1:  96.04  1594
 
-* large
+* large, cased
 processed 46435 tokens with 5648 phrases; found: 5663 phrases; correct: 5212.
 accuracy:  98.47%; precision:  92.04%; recall:  92.28%; FB1:  92.16
               LOC: precision:  93.18%; recall:  93.35%; FB1:  93.26  1671
@@ -75,7 +75,7 @@ accuracy:  98.47%; precision:  92.04%; recall:  92.28%; FB1:  92.16
               ORG: precision:  90.57%; recall:  91.39%; FB1:  90.98  1676
               PER: precision:  96.00%; recall:  96.41%; FB1:  96.20  1624
 
-* large, feature-based
+* large, cased, feature-based
 processed 46435 tokens with 5648 phrases; found: 5680 phrases; correct: 5195.
 accuracy:  98.33%; precision:  91.46%; recall:  91.98%; FB1:  91.72
               LOC: precision:  92.55%; recall:  93.05%; FB1:  92.80  1677
@@ -83,7 +83,7 @@ accuracy:  98.33%; precision:  91.46%; recall:  91.98%; FB1:  91.72
               ORG: precision:  89.54%; recall:  91.75%; FB1:  90.63  1702
               PER: precision:  95.91%; recall:  95.61%; FB1:  95.76  1612
 
-* large, -2 layer
+* large, cased, -2 layer
 processed 46435 tokens with 5648 phrases; found: 5669 phrases; correct: 5194.
 accuracy:  98.34%; precision:  91.62%; recall:  91.96%; FB1:  91.79
               LOC: precision:  94.39%; recall:  91.79%; FB1:  93.07  1622
@@ -95,14 +95,17 @@ accuracy:  98.34%; precision:  91.62%; recall:  91.96%; FB1:  91.79
 ### dev note
 ```
 1. dev.txt
+
 - BERT
-* base
+
+* base, cased
 INFO:tensorflow:Saving dict for global step 30000: eval_accuracy = 0.9934853, eval_f = 0.9627948, eval_loss = 1.6617825, eval_precision = 0.9645357, eval_recall = 0.9610601, global_step = 30000, loss = 1.6632456
 
-* large
+* large, cased
 INFO:tensorflow:Saving dict for global step 31000: eval_accuracy = 0.9936458, eval_f = 0.96526873, eval_loss = 1.6502532, eval_precision = 0.9670967, eval_recall = 0.9634477, global_step = 31000, loss = 1.6502532
 
-- ELMo(for reference)
+- ELMo
+
 [epoch 33/70] dev precision, recall, f1(token):
 precision, recall, fscore
 [0.9978130380159136, 0.9583333333333334, 0.9263271939328277, 0.9706510138740662, 0.9892224788298691, 0.9701897018970189, 0.9464285714285714, 0.8797653958944281, 0.9323308270676691, 0.959865053513262]
@@ -113,12 +116,32 @@ max model saved in file: ./checkpoint/model_max.ckpt
 
 
 2. test.txt
+
 - BERT
-* base
+
+* base, cased
 INFO:tensorflow:Saving dict for global step 30000: eval_accuracy = 0.9861725, eval_f = 0.92653006, eval_loss = 3.263393, eval_precision = 0.9218941, eval_recall = 0.931213, global_step = 30000, loss = 3.263018
 
-* large
+* large, cased
 INFO:tensorflow:Saving dict for global step 31000: eval_accuracy = 0.98725253, eval_f = 0.9329729, eval_loss = 3.080433, eval_precision = 0.9299449, eval_recall = 0.93602073, global_step = 31000, loss = 3.0799496
+
+
+3. word-based BERT
+
+- model download : https://github.com/dsindex/bert
+
+* base, uncased
+
+model : engwiki.1m-step.uncased_L-12_H-768_A-12
+lstm_size : 256
+
+processed 46435 tokens with 5648 phrases; found: 5669 phrases; correct: 4985.
+accuracy:  97.45%; precision:  87.93%; recall:  88.26%; FB1:  88.10
+              LOC: precision:  90.45%; recall:  91.37%; FB1:  90.90  1685
+             MISC: precision:  75.59%; recall:  77.21%; FB1:  76.39  717
+              ORG: precision:  85.42%; recall:  83.56%; FB1:  84.48  1625
+              PER: precision:  93.24%; recall:  94.68%; FB1:  93.96  1642
+
 
 ```
 
