@@ -38,7 +38,8 @@ function debug()
   fi
 }
 
-GETOPT=`getopt -o vh --long dry-run,help -n "${PROGNAME}" -- "$@"`
+#GETOPT=`getopt -o vh --long dry-run,help -n "${PROGNAME}" -- "$@"`
+GETOPT=`getopt vh $*`
 if [ $? != 0 ] ; then print_usage_and_exit 1; fi
 
 eval set -- "${GETOPT}"
