@@ -105,7 +105,7 @@ python bert_lstm_ner.py   \
         --vocab_file=${bert_model_dir}/vocab.txt  \
         --do_lower_case=${lowercase} \
         --bert_config_file=${bert_model_dir}/bert_config.json \
-        --max_seq_length=150   \
+        --max_seq_length=180   \
         --lstm_size=256 \
         --eval_batch_size=32   \
         --predict_batch_size=32   \
