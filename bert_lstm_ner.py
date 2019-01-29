@@ -79,9 +79,6 @@ flags.DEFINE_bool(
     "Whether to run training."
 )
 
-flags.DEFINE_bool("use_feature_based", False,
-    "Whether to use feature-based BERT model(do not fine-tuning).")
-
 flags.DEFINE_bool("use_tpu", False, "Whether to use TPU or GPU/CPU.")
 
 flags.DEFINE_bool("do_predict", True, "Whether to run the model in inference mode on the test set.")
@@ -413,11 +410,9 @@ def file_based_input_fn_builder(input_file, seq_length, is_training, drop_remain
 def create_model(bert_config, is_training, input_ids, input_mask,
                  segment_ids, labels, num_labels, use_one_hot_embeddings):
 
-    is_training_for_bert = is_training
-    if FLAGS.use_feature_based: is_training_for_bert = False
     model = modeling.BertModel(
         config=bert_config,
-        is_training=is_training_for_bert, # False for feature-based, is_training for fine-tuning
+        is_training=is_training,
         input_ids=input_ids,
         input_mask=input_mask,
         token_type_ids=segment_ids,

@@ -98,7 +98,6 @@ bert_model_dir=${CDIR}/cased_L-24_H-1024_A-16
 python bert_lstm_ner.py   \
         --task_name="NER"  \
         --do_train=False   \
-        --use_feature_based=False \
         --do_predict=True \
         --use_crf=True \
         --data_dir=${CDIR}/NERdata  \
