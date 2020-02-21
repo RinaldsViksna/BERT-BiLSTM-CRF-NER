@@ -127,9 +127,6 @@ flags.DEFINE_integer(
     "num_tpu_cores", 8,
     "Only used if `use_tpu` is True. Total number of TPU cores to use.")
 
-flags.DEFINE_string('data_config_path', 'data.conf',
-                    'data config file, which save train and dev config')
-
 flags.DEFINE_integer('lstm_size', 128, 'size of lstm units')
 
 class InputExample(object):
@@ -244,10 +241,12 @@ class NerProcessor(object):
                     labels = []
                     continue
                 tokens = line.strip().split(' ')
-                assert(len(tokens) == 4)
+                if not (len(tokens) == 2):
+                    print(line)
+                # assert(len(tokens) == 2) # Datos ir starpas
                 word  = tokens[0]
-                pos   = tokens[1]
-                chunk = tokens[2]
+                pos   = "_"#tokens[1]
+                chunk = "_"#tokens[2]
                 label = tokens[-1]
                 words.append(word)
                 poss.append(pos)
@@ -636,6 +635,8 @@ def main(_):
     processors = {
         "ner": NerProcessor
     }
+    if not os.path.exists(FLAGS.output_dir):
+        os.makedirs(FLAGS.output_dir)
 
     bert_config = modeling.BertConfig.from_json_file(FLAGS.bert_config_file)
 
@@ -649,7 +650,7 @@ def main(_):
     if task_name not in processors:
         raise ValueError("Task not found: %s" % (task_name))
     processor = processors[task_name]()
-
+    
     label_list = processor.get_labels()
 
     tokenizer = tokenization.FullTokenizer(
@@ -677,23 +678,11 @@ def main(_):
     num_train_steps = None
     num_warmup_steps = None
 
-    if os.path.exists(FLAGS.data_config_path):
-        with codecs.open(FLAGS.data_config_path) as fd:
-            data_config = json.load(fd)
-    else:
-        data_config = {}
-
+    
     if FLAGS.do_train:
-        if len(data_config) == 0:
-            train_examples = processor.get_train_examples(FLAGS.data_dir)
-            num_train_steps = int((len(train_examples) / FLAGS.train_batch_size) * FLAGS.num_train_epochs)
-            num_warmup_steps = int(num_train_steps * FLAGS.warmup_proportion)
-            data_config['num_train_steps'] = num_train_steps
-            data_config['num_warmup_steps'] = num_warmup_steps
-            data_config['num_train_size'] = len(train_examples)
-        else:
-            num_train_steps = int(data_config['num_train_steps'])
-            num_warmup_steps = int(data_config['num_warmup_steps'])
+        train_examples = processor.get_train_examples(FLAGS.data_dir)
+        num_train_steps = int((len(train_examples) / FLAGS.train_batch_size) * FLAGS.num_train_epochs)
+        num_warmup_steps = int(num_train_steps * FLAGS.warmup_proportion)
 
     model_fn = model_fn_builder(
         bert_config=bert_config,
@@ -715,15 +704,12 @@ def main(_):
 
     if FLAGS.do_train:
         # prepare train_input_fn
-        if data_config.get('train.tf_record_path', '') == '':
-            train_file = os.path.join(FLAGS.output_dir, "train.tf_record")
-            filed_based_convert_examples_to_features(
-                train_examples, label_list, FLAGS.max_seq_length, tokenizer, train_file)
-        else:
-            train_file = data_config.get('train.tf_record_path')
-        num_train_size = num_train_size = int(data_config['num_train_size'])
+        train_file = os.path.join(FLAGS.output_dir, "train.tf_record")
+        filed_based_convert_examples_to_features(
+            train_examples, label_list, FLAGS.max_seq_length, tokenizer, train_file)
+
         tf.logging.info("***** Running training *****")
-        tf.logging.info("  Num examples = %d", num_train_size)
+        tf.logging.info("  Num examples = %d", len(train_examples))
         tf.logging.info("  Batch size = %d", FLAGS.train_batch_size)
         tf.logging.info("  Num steps = %d", num_train_steps)
         train_input_fn = file_based_input_fn_builder(
@@ -732,16 +718,12 @@ def main(_):
             is_training=True,
             drop_remainder=True)
         # prepare eval_input_fn
-        if data_config.get('eval.tf_record_path', '') == '':
-            eval_examples = processor.get_dev_examples(FLAGS.data_dir)
-            eval_file = os.path.join(FLAGS.output_dir, "eval.tf_record")
-            filed_based_convert_examples_to_features(
-                eval_examples, label_list, FLAGS.max_seq_length, tokenizer, eval_file)
-            data_config['eval.tf_record_path'] = eval_file
-            data_config['num_eval_size'] = len(eval_examples)
-        else:
-            eval_file = data_config['eval.tf_record_path']
-        num_eval_size = data_config.get('num_eval_size', 0)
+        eval_examples = processor.get_dev_examples(FLAGS.data_dir)
+        eval_file = os.path.join(FLAGS.output_dir, "eval.tf_record")
+        filed_based_convert_examples_to_features(
+            eval_examples, label_list, FLAGS.max_seq_length, tokenizer, eval_file)
+
+        num_eval_size = len(eval_examples)
         tf.logging.info("***** Running evaluation *****")
         tf.logging.info("  Num examples = %d", num_eval_size)
         tf.logging.info("  Batch size = %d", FLAGS.eval_batch_size)
@@ -755,7 +737,8 @@ def main(_):
             is_training=False,
             drop_remainder=eval_drop_remainder)
         # train and evaluate 
-        hook = tf.contrib.estimator.stop_if_no_decrease_hook(
+        # hook = tf.contrib.estimator.stop_if_no_decrease_hook(
+        hook = tf.estimator.experimental.stop_if_no_decrease_hook(
             estimator, 'eval_f', 3000, min_steps=30000, run_every_secs=120)
         train_spec = tf.estimator.TrainSpec(input_fn=train_input_fn, max_steps=num_train_steps, hooks=[hook])
         eval_spec = tf.estimator.EvalSpec(input_fn=eval_input_fn, throttle_secs=120)
@@ -769,9 +752,6 @@ def main(_):
                 tf.logging.info("  %s = %s", key, str(result[key]))
                 writer.write("%s = %s\n" % (key, str(result[key])))
 
-    if not os.path.exists(FLAGS.data_config_path):
-        with codecs.open(FLAGS.data_config_path, 'a', encoding='utf-8') as fd:
-            json.dump(data_config, fd)
 
     if FLAGS.do_predict:
         # prepare predict_input_fn
@@ -842,13 +822,6 @@ def main(_):
                     writer.write(output_line + '\n')
                     seq += 1
                 writer.write('\n')
-
-
-def data_load():
-    processer = NerProcessor()
-    processer.get_labels()
-    processer.get_train_examples(FLAGS.data_dir)
-    print()
 
 
 if __name__ == "__main__":
